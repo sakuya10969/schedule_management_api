@@ -1,0 +1,15 @@
+requests
+azure-cosmos
+ipdb
+fastapi
+uvicorn
+python-multipart
+pydantic
+msal
+python-dateutil
+pytest
+pytest-cov
+httpx
+black
+aiohttp
+python-dotenv
