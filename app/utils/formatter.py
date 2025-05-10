@@ -1,7 +1,6 @@
 from dateutil.parser import parse
 from typing import Tuple, List
 
-
 def parse_candidate(candidate: str) -> Tuple[str, str, List[str]]:
     """
     "開始日時, 終了日時" の形式の文字列をパースして開始日時、終了日時、
@@ -15,7 +14,6 @@ def parse_candidate(candidate: str) -> Tuple[str, str, List[str]]:
         raise ValueError(
             "候補情報の形式が不正です。'開始日時, 終了日時' の形式で入力してください。"
         )
-
 
 def format_candidate_date(candidate: str) -> str:
     """候補日程文字列を整形する関数。"""
