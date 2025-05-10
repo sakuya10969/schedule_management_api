@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, List, Tuple, Any
-from app.utils.access_token import get_access_token
+
 from app.config import SYSTEM_SENDER_EMAIL
 from app.utils.formatter import format_candidate_date
 from app.schemas.form import ScheduleRequest, AppointmentRequest
@@ -10,8 +10,7 @@ logger = logging.getLogger(__name__)
 
 def get_schedules(schedule_req: ScheduleRequest) -> Dict[str, Any]:
     """スケジュールを取得するビジネスロジック"""
-    access_token = get_access_token()
-    client = GraphAPIClient(access_token)
+    graph_api_client = GraphAPIClient()
 
     target_user_email = schedule_req.users[0].email
     body = {
@@ -27,7 +26,7 @@ def get_schedules(schedule_req: ScheduleRequest) -> Dict[str, Any]:
         "availabilityViewInterval": 30,
     }
 
-    return client.get_schedules(target_user_email, body)
+    return graph_api_client.get_schedules(target_user_email, body)
 
 def parse_availability(schedule_data: Dict[str, Any], start_hour: float, end_hour: float) -> List[List[Tuple[float, float]]]:
     """空き時間をパースするビジネスロジック"""
@@ -66,12 +65,10 @@ def create_event_payload(appointment_req: AppointmentRequest, start_str: str, en
 
 def register_event(user_email: str, event: Dict[str, Any]) -> Dict[str, Any]:
     """イベントを登録するビジネスロジック"""
-    access_token = get_access_token()
-    client = GraphAPIClient(access_token)
-    return client.retry_operation(client.register_event, user_email, event)
+    graph_api_client = GraphAPIClient()
+    return graph_api_client.retry_operation(graph_api_client.register_event, user_email, event)
 
 def send_email(sender_email: str, to_email: str, subject: str, body: str) -> None:
     """メールを送信するビジネスロジック"""
-    access_token = get_access_token()
-    client = GraphAPIClient(access_token)
-    client.send_email(sender_email, to_email, subject, body)
+    graph_api_client = GraphAPIClient()
+    graph_api_client.send_email(sender_email, to_email, subject, body)

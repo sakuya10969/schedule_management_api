@@ -9,17 +9,16 @@ from app.utils.time import (
     slot_to_time,
     find_common_availability,
 )
-from app.utils.access_token import get_access_token
 
 logger = logging.getLogger(__name__)
 
-async def retrieve_form_data_usecase(access_token: str) -> FormData:
+async def retrieve_form_data_usecase(token: str) -> FormData:
     """
     フォームデータを取得し、最新の空き時間を含めて返すユースケース
     """
     try:
         cosmos_db_client = AzCosmosDBClient()
-        item = cosmos_db_client.get_form_data(access_token)
+        item = cosmos_db_client.get_form_data(token)
 
         if not item.get("isConfirmed", False):
             schedule_request = ScheduleRequest(
@@ -34,7 +33,7 @@ async def retrieve_form_data_usecase(access_token: str) -> FormData:
             )
 
             try:
-                graph_api_client = GraphAPIClient(access_token)
+                graph_api_client = GraphAPIClient()
                 schedule_info = graph_api_client.get_schedules(
                     target_user_email=schedule_request.users[0].email,
                     body=schedule_request.model_dump()

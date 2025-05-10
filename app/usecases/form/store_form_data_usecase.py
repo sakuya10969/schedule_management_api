@@ -10,8 +10,8 @@ async def store_form_data_usecase(payload: FormData) -> str:
     フォームデータを保存し、トークンを返すユースケース
     """
     try:
-        db_client = AzCosmosDBClient()
-        token = db_client.create_form_data(payload.model_dump())
+        cosmos_db_client = AzCosmosDBClient()
+        token = cosmos_db_client.create_form_data(payload.model_dump())
         return token
     except Exception as e:
         logger.error(f"フォームデータの保存に失敗しました: {e}")

@@ -5,11 +5,13 @@ import time
 from fastapi import HTTPException
 from typing import Dict, Any
 
+from app.utils.access_token import get_access_token
+
 logger = logging.getLogger(__name__)
 
 class GraphAPIClient:
-    def __init__(self, access_token: str):
-        self.access_token = access_token
+    def __init__(self):
+        self.access_token = get_access_token()
         self.headers = {
             "Authorization": f"Bearer {self.access_token}",
             "Content-Type": "application/json",
