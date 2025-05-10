@@ -1,4 +1,3 @@
-import os
 import logging
 import uuid
 import time
@@ -6,19 +5,21 @@ from typing import Dict, List, Any
 from fastapi import HTTPException
 from dateutil.parser import parse
 from azure.cosmos import CosmosClient, exceptions
-from app.config import AZ_COSMOS_DB_KEY, AZ_COSMOS_DB_ENDPOINT, AZ_COSMOS_DB_NAME, AZ_COSMOS_DB_CONTAINER_NAME, AZ_COSMOS_DB_PARTITION_KEY
+from app.config.config import get_config
 
 logger = logging.getLogger(__name__)
+
+config = get_config()
 
 class AzCosmosDBClient:
     def __init__(self):
         """Cosmos DB クライアント初期化"""
         try:
-            self.client = CosmosClient(AZ_COSMOS_DB_ENDPOINT, AZ_COSMOS_DB_KEY)
-            self.database = self.client.create_database_if_not_exists(id=AZ_COSMOS_DB_NAME)
+            self.cosmos_db_client = CosmosClient(config['AZ_COSMOS_DB_ENDPOINT'], config['AZ_COSMOS_DB_KEY'])
+            self.database = self.cosmos_db_client.create_database_if_not_exists(id=config['AZ_COSMOS_DB_NAME'])
             self.container = self.database.create_container_if_not_exists(
-                id=AZ_COSMOS_DB_CONTAINER_NAME,
-                partition_key={"paths": [f"/{AZ_COSMOS_DB_PARTITION_KEY}"], "kind": "Hash"}
+                id=config['AZ_COSMOS_DB_CONTAINER_NAME'],
+                partition_key={"paths": [f"/{config['AZ_COSMOS_DB_PARTITION_KEY']}"], "kind": "Hash"}
             )
             logger.info("Cosmos DB クライアントの初期化成功")
         except Exception as e:
@@ -28,7 +29,7 @@ class AzCosmosDBClient:
     def create_form_data(self, payload: Dict[str, Any]) -> str:
         """フォームデータをCosmos DBに保存する"""
         token = str(uuid.uuid4())
-        data = {"id": token, "partitionKey": AZ_COSMOS_DB_PARTITION_KEY, **payload}
+        data = {"id": token, "partitionKey": config['AZ_COSMOS_DB_PARTITION_KEY'], **payload}
         try:
             self.container.create_item(body=data)
             logger.info("フォームデータを保存しました")
@@ -40,7 +41,7 @@ class AzCosmosDBClient:
     def get_form_data(self, token: str) -> Dict[str, Any]:
         """トークンからフォームデータを取得する"""
         try:
-            item = self.container.read_item(item=token, partition_key=AZ_COSMOS_DB_PARTITION_KEY)
+            item = self.container.read_item(item=token, partition_key=config['AZ_COSMOS_DB_PARTITION_KEY'])
             for key in ["_rid", "_self", "_etag", "_ts"]:
                 item.pop(key, None)
             logger.info("フォームデータを取得しました")
@@ -56,7 +57,7 @@ class AzCosmosDBClient:
 
         while retry_count < max_retries:
             try:
-                form = self.container.read_item(item=token, partition_key=AZ_COSMOS_DB_PARTITION_KEY)
+                form = self.container.read_item(item=token, partition_key=config['AZ_COSMOS_DB_PARTITION_KEY'])
                 form["event_ids"] = event_ids
                 self.container.replace_item(item=form["id"], body=form)
                 logger.info("フォームデータを更新しました")
@@ -78,7 +79,7 @@ class AzCosmosDBClient:
           AND ARRAY_CONTAINS(c.candidates, @selectedCandidate)
         """
         parameters = [
-            {"name": "@partitionKey", "value": AZ_COSMOS_DB_PARTITION_KEY},
+            {"name": "@partitionKey", "value": config['AZ_COSMOS_DB_PARTITION_KEY']},
             {"name": "@currentToken", "value": selected_token},
             {"name": "@selectedCandidate", "value": selected_candidate},
         ]

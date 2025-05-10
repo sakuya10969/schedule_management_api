@@ -4,7 +4,7 @@ from fastapi import BackgroundTasks
 from app.schemas import AppointmentRequest, AppointmentResponse
 from app.infrastructure.graph_api import GraphAPIClient
 from app.infrastructure.az_cosmos import AzCosmosDBClient
-from app.services.email_service import send_confirmation_emails, send_no_available_schedule_emails
+from app.services.email_service import EmailService
 from app.utils.formatter import parse_candidate
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,8 @@ def _handle_no_available_schedule(
 ) -> AppointmentResponse:
     """候補日がない場合の処理"""
     logger.info("候補として '可能な日程がない' が選択されました。予定は登録されません。")
-    background_tasks.add_task(send_no_available_schedule_emails, appointment_req)
+    email_service = EmailService()
+    background_tasks.add_task(email_service.send_no_available_schedule_emails, appointment_req)
     return AppointmentResponse(
         message="候補として '可能な日程がない' が選択されました。予定は登録されません。",
         subjects=[],
@@ -101,7 +102,8 @@ def _schedule_confirmation_emails(
 ) -> None:
     """確認メールの送信をスケジュール"""
     meeting_urls = [e.get("onlineMeeting", {}).get("joinUrl") for e in created_events]
-    background_tasks.add_task(send_confirmation_emails, appointment_req, meeting_urls)
+    email_service = EmailService()
+    background_tasks.add_task(email_service.send_confirmation_emails, appointment_req, meeting_urls)
 
 def _create_response(created_events: list, users: list) -> AppointmentResponse:
     """レスポンスを作成"""

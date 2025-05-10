@@ -2,13 +2,11 @@ import logging
 import time
 from msal import ConfidentialClientApplication
 
-from app.config import (
-    TENANT_ID,
-    CLIENT_ID,
-    CLIENT_SECRET,
-)
+from app.config.config import get_config
 
 logger = logging.getLogger(__name__)
+
+config = get_config()
 
 # Microsoft Graph API用のアクセストークン取得
 def get_access_token() -> str:
@@ -25,9 +23,9 @@ def get_access_token() -> str:
             ]  # Graph API 全般の既定スコープ
 
             app = ConfidentialClientApplication(
-                client_id=CLIENT_ID,
-                client_credential=CLIENT_SECRET,
-                authority=f"https://login.microsoftonline.com/{TENANT_ID}",
+                client_id=config['CLIENT_ID'],
+                client_credential=config['CLIENT_SECRET'],
+                authority=f"https://login.microsoftonline.com/{config['TENANT_ID']}",
             )
 
             result = app.acquire_token_silent(scope, account=None)

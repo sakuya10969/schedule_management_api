@@ -2,9 +2,11 @@ import logging
 from fastapi.responses import HTMLResponse, RedirectResponse
 from app.infrastructure.az_cosmos import AzCosmosDBClient
 from app.infrastructure.graph_api import GraphAPIClient
-from app.config import FRONTEND_URL, BACKEND_URL
+from app.config.config import get_config
 
 logger = logging.getLogger(__name__)
+
+config = get_config()
 
 async def reschedule_usecase(token: str, confirm: bool) -> HTMLResponse:
     """リスケジュール処理（キャンセルと確認）を行うユースケース"""
@@ -36,7 +38,7 @@ def _has_event_ids(form: dict) -> bool:
 
 def _redirect_to_appointment(token: str) -> RedirectResponse:
     """予約ページへリダイレクト"""
-    redirect_url = f"{FRONTEND_URL}/appointment?token={token}"
+    redirect_url = f"{config['CLIENT_URL']}/appointment?token={token}"
     return RedirectResponse(url=redirect_url, status_code=302)
 
 def _show_confirmation_page(token: str) -> HTMLResponse:
@@ -47,12 +49,12 @@ def _show_confirmation_page(token: str) -> HTMLResponse:
         "既存の予定を削除して再調整しますか？",
         [
             {
-                "url": f"{BACKEND_URL}/reschedule?token={token}&confirm=true",
+                "url": f"{config['API_URL']}/reschedule?token={token}&confirm=true",
                 "text": "再調整する",
                 "class": "bg-red-500 hover:bg-red-700"
             },
             {
-                "url": f"{FRONTEND_URL}/appointment?token={token}",
+                "url": f"{config['CLIENT_URL']}/appointment?token={token}",
                 "text": "キャンセル",
                 "class": "bg-gray-500 hover:bg-gray-700"
             }
@@ -85,7 +87,7 @@ def _show_complete_page(token: str) -> HTMLResponse:
         "既存の予定は削除されました。<br>以下のボタンから新たに日程をご入力ください。",
         [
             {
-                "url": f"{FRONTEND_URL}/appointment?token={token}",
+                "url": f"{config['CLIENT_URL']}/appointment?token={token}",
                 "text": "日程再調整画面へ",
                 "class": "bg-blue-500 hover:bg-blue-700"
             }

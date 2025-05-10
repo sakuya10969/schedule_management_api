@@ -1,20 +1,20 @@
 import logging
 from app.schemas import ScheduleRequest, AvailabilityResponse
-from app.infrastructure.graph_api import GraphAPIClient
+from app.services.schedule_service import ScheduleService
 from app.utils.time import (
     time_string_to_float,
     slot_to_time,
     find_common_availability,
     find_common_availability_participants,
 )
-from app.services.schedule_service import parse_availability
 
 logger = logging.getLogger(__name__)
 
 async def get_availability_usecase(schedule_req: ScheduleRequest) -> AvailabilityResponse:
     """ユーザーの空き時間を計算して返すユースケース"""
     try:
-        schedule_info = _get_schedule_info(schedule_req)
+        schedule_service = ScheduleService()
+        schedule_info = schedule_service.get_schedules(schedule_req)
         common_times = _calculate_common_times(schedule_req, schedule_info)
         return AvailabilityResponse(common_availability=common_times)
 
@@ -22,18 +22,12 @@ async def get_availability_usecase(schedule_req: ScheduleRequest) -> Availabilit
         logger.error(f"空き時間取得ユースケースに失敗しました: {e}")
         raise
 
-def _get_schedule_info(schedule_req: ScheduleRequest) -> dict:
-    """Graph APIを使ってスケジュール情報を取得"""
-    graph_api_client = GraphAPIClient()
-    schedule_info = graph_api_client.get_schedules(schedule_req.users[0].email, schedule_req.dict())
-    logger.info(f"取得したスケジュール情報: {schedule_info}")
-    return schedule_info
-
 def _calculate_common_times(schedule_req: ScheduleRequest, schedule_info: dict) -> list:
     """共通の空き時間を計算"""
+    schedule_service = ScheduleService()
     start_hour = time_string_to_float(schedule_req.start_time)
     end_hour = time_string_to_float(schedule_req.end_time)
-    free_slots_list = parse_availability(schedule_info, start_hour, end_hour)
+    free_slots_list = schedule_service.parse_availability(schedule_info, start_hour, end_hour)
 
     datetime_tuples = _get_datetime_tuples(schedule_req, free_slots_list)
     return _format_datetime_tuples(datetime_tuples)

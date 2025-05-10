@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from functools import lru_cache
 
 # .envファイルをロード
 load_dotenv()
@@ -21,10 +22,28 @@ GRAPH_API_BASE_URL = "https://graph.microsoft.com/v1.0/"
 GRAPH_API_BETA_URL = "https://graph.microsoft.com/beta/"
 
 # フロントエンドURL
-FRONTEND_URL = "http://localhost:3000"
+CLIENT_URL = "http://localhost:3000"
 
 # バックエンドURL
 API_URL = "http://127.0.0.1:8000"
 
 # システム送信者メールアドレス
 SYSTEM_SENDER_EMAIL = "crawler01@intelligentforce.co.jp"
+
+@lru_cache()
+def get_config():
+    return {
+        "AZ_COSMOS_DB_KEY": AZ_COSMOS_DB_KEY,
+        "AZ_COSMOS_DB_ENDPOINT": AZ_COSMOS_DB_ENDPOINT,
+        "AZ_COSMOS_DB_NAME": AZ_COSMOS_DB_NAME,
+        "AZ_COSMOS_DB_CONTAINER_NAME": AZ_COSMOS_DB_CONTAINER_NAME,
+        "AZ_COSMOS_DB_PARTITION_KEY": AZ_COSMOS_DB_PARTITION_KEY,
+        "TENANT_ID": TENANT_ID,
+        "CLIENT_ID": CLIENT_ID,
+        "CLIENT_SECRET": CLIENT_SECRET,
+        "GRAPH_API_BASE_URL": GRAPH_API_BASE_URL,
+        "GRAPH_API_BETA_URL": GRAPH_API_BETA_URL,
+        "CLIENT_URL": CLIENT_URL,
+        "API_URL": API_URL,
+        "SYSTEM_SENDER_EMAIL": SYSTEM_SENDER_EMAIL
+    }
