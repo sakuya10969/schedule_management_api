@@ -4,9 +4,9 @@ from fastapi.responses import RedirectResponse, HTMLResponse
 from app.schemas import ScheduleRequest, AppointmentRequest, AppointmentResponse, AvailabilityResponse
 
 # ユースケースのインポート
-from app.usecases.availability import get_availability_usecase
-from app.usecases.appointment import create_appointment_usecase
-from app.usecases.reschedule import reschedule_usecase
+from app.usecases.schedule.availability_usecase import get_availability_usecase
+from app.usecases.schedule.appointment_usecase import create_appointment_usecase
+from app.usecases.schedule.reschedule_usecase import reschedule_usecase
 
 router = APIRouter(tags=["schedule"])
 logger = logging.getLogger(__name__)
