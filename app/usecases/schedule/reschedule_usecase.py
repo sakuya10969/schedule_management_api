@@ -11,35 +11,36 @@ config = get_config()
 async def reschedule_usecase(token: str, confirm: bool) -> HTMLResponse:
     """リスケジュール処理（キャンセルと確認）を行うユースケース"""
     try:
-        form = _get_form_data(token)
+        cosmos_db_client = AzCosmosDBClient()
+        form = cosmos_db_client.get_form_data(token)
         
-        if not _has_event_ids(form):
-            return _redirect_to_appointment(token)
+        if "event_ids" not in form:
+            redirect_url = f"{config['CLIENT_URL']}/appointment?token={token}"
+            return RedirectResponse(url=redirect_url, status_code=302)
 
         if not confirm:
             return _show_confirmation_page(token)
 
-        _delete_events(form)
-        _reset_form(token, form)
+        # イベントの削除
+        graph_api_client = GraphAPIClient()
+        for user_email, event_id in form["event_ids"].items():
+            try:
+                graph_api_client.delete_event(user_email, event_id)
+                logger.info(f"予定削除成功: {user_email} - {event_id}")
+            except Exception as e:
+                logger.error(f"予定削除失敗: {user_email} - {event_id}: {e}")
+                raise
+
+        # フォームのリセット
+        form["isConfirmed"] = False
+        form.pop("event_ids", None)
+        cosmos_db_client.update_form_with_events(token, form)
+
         return _show_complete_page(token)
 
     except Exception as e:
         logger.error(f"リスケジュールユースケースエラー: {e}")
         raise
-
-def _get_form_data(token: str) -> dict:
-    """Cosmos DBからフォームデータを取得"""
-    cosmos_db_client = AzCosmosDBClient()
-    return cosmos_db_client.get_form_data(token)
-
-def _has_event_ids(form: dict) -> bool:
-    """フォームにイベントIDが存在するか確認"""
-    return "event_ids" in form
-
-def _redirect_to_appointment(token: str) -> RedirectResponse:
-    """予約ページへリダイレクト"""
-    redirect_url = f"{config['CLIENT_URL']}/appointment?token={token}"
-    return RedirectResponse(url=redirect_url, status_code=302)
 
 def _show_confirmation_page(token: str) -> HTMLResponse:
     """確認ページを表示"""
@@ -60,24 +61,6 @@ def _show_confirmation_page(token: str) -> HTMLResponse:
             }
         ]
     )
-
-def _delete_events(form: dict) -> None:
-    """登録済みのイベントを削除"""
-    graph_api_client = GraphAPIClient()
-    for user_email, event_id in form["event_ids"].items():
-        try:
-            graph_api_client.delete_event(user_email, event_id)
-            logger.info(f"予定削除成功: {user_email} - {event_id}")
-        except Exception as e:
-            logger.error(f"予定削除失敗: {user_email} - {event_id}: {e}")
-            raise
-
-def _reset_form(token: str, form: dict) -> None:
-    """フォームをリセット"""
-    form["isConfirmed"] = False
-    form.pop("event_ids", None)
-    cosmos_db_client = AzCosmosDBClient()
-    cosmos_db_client.update_form_with_events(token, form)
 
 def _show_complete_page(token: str) -> HTMLResponse:
     """完了ページを表示"""

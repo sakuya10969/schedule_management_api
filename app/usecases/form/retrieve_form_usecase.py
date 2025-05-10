@@ -16,10 +16,21 @@ async def retrieve_form_data_usecase(token: str) -> FormData:
     フォームデータを取得し、最新の空き時間を含めて返すユースケース
     """
     try:
-        form_data = _get_form_data(token)
+        cosmos_db_client = AzCosmosDBClient()
+        form_data = cosmos_db_client.get_form_data(token)
         
         if not form_data.get("isConfirmed", False):
-            schedule_request = _create_schedule_request(form_data)
+            # ScheduleRequestを作成
+            schedule_request = ScheduleRequest(
+                start_date=form_data["start_date"],
+                end_date=form_data["end_date"],
+                start_time=form_data["start_time"],
+                end_time=form_data["end_time"],
+                selected_days=form_data["selected_days"],
+                duration_minutes=form_data["duration_minutes"],
+                users=form_data["users"],
+                time_zone="Tokyo Standard Time",
+            )
             form_data["candidates"] = _get_available_slots(schedule_request)
 
         return FormData(**form_data)
@@ -27,24 +38,6 @@ async def retrieve_form_data_usecase(token: str) -> FormData:
     except Exception as e:
         logger.error(f"フォームデータが見つかりません: {e}")
         raise HTTPException(status_code=404, detail="Token not found")
-
-def _get_form_data(token: str) -> dict:
-    """Cosmos DBからフォームデータを取得"""
-    cosmos_db_client = AzCosmosDBClient()
-    return cosmos_db_client.get_form_data(token)
-
-def _create_schedule_request(form_data: dict) -> ScheduleRequest:
-    """フォームデータからScheduleRequestを作成"""
-    return ScheduleRequest(
-        start_date=form_data["start_date"],
-        end_date=form_data["end_date"],
-        start_time=form_data["start_time"],
-        end_time=form_data["end_time"],
-        selected_days=form_data["selected_days"],
-        duration_minutes=form_data["duration_minutes"],
-        users=form_data["users"],
-        time_zone="Tokyo Standard Time",
-    )
 
 def _get_available_slots(schedule_request: ScheduleRequest) -> list:
     """空き時間スロットを取得して整形"""
