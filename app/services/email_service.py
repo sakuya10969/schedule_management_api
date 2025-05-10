@@ -19,16 +19,17 @@ class EmailService:
     ) -> None:
         """内部向けおよび先方向けの確認メール送信処理をまとめる。"""
         meeting_url = meeting_urls[0] if isinstance(meeting_urls, list) else meeting_urls
-        self._send_internal_confirmation_email(appointment_req, meeting_url)
-        self._send_client_confirmation_email(appointment_req, meeting_url)
-
-    def _send_internal_confirmation_email(
-        self, appointment_req: AppointmentRequest, meeting_url: str
-    ) -> None:
-        """内部関係者向けに確認メールを送信する"""
-        subject = self._create_internal_subject(appointment_req)
-        body = self._create_internal_body(appointment_req, meeting_url)
-
+        
+        # 内部関係者向けメール送信
+        subject = f"【{appointment_req.company}/{appointment_req.lastname}{appointment_req.firstname}様】日程確定"
+        body = (
+            "日程調整が完了しました。詳細は下記の通りです。<br><br>"
+            f"・氏名<br>{appointment_req.lastname} {appointment_req.firstname}<br>"
+            f"・所属<br>{appointment_req.company}<br>"
+            f"・メールアドレス<br>{appointment_req.email}<br>"
+            f"・日程<br>{format_candidate_date(appointment_req.candidate)}<br>"
+            f'・会議URL<br><a href="{meeting_url}">{meeting_url}</a><br><br>'
+        )
         for to_email in appointment_req.users:
             self.graph_client.send_email(
                 config['SYSTEM_SENDER_EMAIL'], 
@@ -37,55 +38,10 @@ class EmailService:
                 body
             )
 
-    def _send_client_confirmation_email(
-        self, appointment_req: AppointmentRequest, meeting_url: str
-    ) -> None:
-        """クライアント向けに確認メールを送信する"""
+        # クライアント向けメール送信
         subject = "日程確定（インテリジェントフォース）"
-        body = self._create_client_body(appointment_req, meeting_url)
-        
-        self.graph_client.send_email(
-            config['SYSTEM_SENDER_EMAIL'],
-            appointment_req.email,
-            subject,
-            body
-        )
-
-    def send_no_available_schedule_emails(
-        self, appointment_req: AppointmentRequest
-    ) -> None:
-        """可能な日程がない場合のメールを担当者に送信する"""
-        subject = self._create_internal_subject(appointment_req)
-        body = self._create_no_schedule_body(appointment_req)
-
-        for to_email in appointment_req.users:
-            self.graph_client.send_email(
-                config['SYSTEM_SENDER_EMAIL'],
-                to_email,
-                subject,
-                body
-            )
-
-    def _create_internal_subject(self, appointment_req: AppointmentRequest) -> str:
-        """内部向けメールの件名を作成"""
-        return f"【{appointment_req.company}/{appointment_req.lastname}{appointment_req.firstname}様】日程確定"
-
-    def _create_internal_body(self, appointment_req: AppointmentRequest, meeting_url: str) -> str:
-        """内部向けメールの本文を作成"""
-        return (
-            "日程調整が完了しました。詳細は下記の通りです。<br><br>"
-            f"・氏名<br>{appointment_req.lastname} {appointment_req.firstname}<br>"
-            f"・所属<br>{appointment_req.company}<br>"
-            f"・メールアドレス<br>{appointment_req.email}<br>"
-            f"・日程<br>{format_candidate_date(appointment_req.candidate)}<br>"
-            f'・会議URL<br><a href="{meeting_url}">{meeting_url}</a><br><br>'
-        )
-
-    def _create_client_body(self, appointment_req: AppointmentRequest, meeting_url: str) -> str:
-        """クライアント向けメールの本文を作成"""
         reschedule_link = f"{config['API_URL']}/reschedule?token={appointment_req.token}"
-        
-        return (
+        body = (
             f"{appointment_req.lastname}様<br><br>"
             "この度は日程を調整いただきありがとうございます。<br>"
             "ご登録いただいた内容、および当日の会議URLは下記の通りです。<br><br>"
@@ -100,10 +56,19 @@ class EmailService:
             "以上になります。<br>"
             "当日はどうぞよろしくお願いいたします。"
         )
+        self.graph_client.send_email(
+            config['SYSTEM_SENDER_EMAIL'],
+            appointment_req.email,
+            subject,
+            body
+        )
 
-    def _create_no_schedule_body(self, appointment_req: AppointmentRequest) -> str:
-        """日程調整不可の場合のメール本文を作成"""
-        return (
+    def send_no_available_schedule_emails(
+        self, appointment_req: AppointmentRequest
+    ) -> None:
+        """可能な日程がない場合のメールを担当者に送信する"""
+        subject = f"【{appointment_req.company}/{appointment_req.lastname}{appointment_req.firstname}様】日程確定"
+        body = (
             f"{appointment_req.lastname}様<br><br>"
             "以下の候補者から日程調整の回答がありましたが、提示された日程では面接の調整ができませんでした。<br><br>"
             f"・氏名<br>{appointment_req.lastname} {appointment_req.firstname}<br><br>"
@@ -113,3 +78,11 @@ class EmailService:
             "別の日程を提示するか、直接候補者と調整をお願いします。<br><br>"
             "※このメールは自動送信されています。"
         )
+
+        for to_email in appointment_req.users:
+            self.graph_client.send_email(
+                config['SYSTEM_SENDER_EMAIL'],
+                to_email,
+                subject,
+                body
+            )
