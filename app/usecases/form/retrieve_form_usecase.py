@@ -6,8 +6,7 @@ from app.infrastructure.az_cosmos import AzCosmosDBClient
 from app.infrastructure.graph_api import GraphAPIClient
 from app.utils.time import (
     time_string_to_float,
-    slot_to_time,
-    find_common_availability,
+    find_common_availability_in_date_range,
 )
 
 logger = logging.getLogger(__name__)
@@ -59,16 +58,31 @@ def _get_available_slots(schedule_request: ScheduleRequest) -> list:
         start_hour = time_string_to_float(schedule_request.start_time)
         end_hour = time_string_to_float(schedule_request.end_time)
         
-        free_slots_list = find_common_availability(schedule_info, start_hour, end_hour)
-        common_times = slot_to_time(schedule_request.start_date, free_slots_list)
+        # 新しい日付範囲対応の関数を使用
+        available_slots = find_common_availability_in_date_range(
+            free_slots_list=schedule_info,
+            duration_minutes=schedule_request.duration_minutes,
+            start_date=schedule_request.start_date,
+            end_date=schedule_request.end_date,
+            start_hour=start_hour,
+            end_hour=end_hour
+        )
 
-        return [
-            [
-                start_dt.strftime("%Y-%m-%dT%H:%M:%S"),
-                end_dt.strftime("%Y-%m-%dT%H:%M:%S"),
-            ]
-            for start_dt, end_dt in common_times
-        ]
+        # 結果を整形
+        result = []
+        for date_str, slots in available_slots.items():
+            for slot in slots:
+                start_str, end_str = slot.split(" - ")
+                start_hour = float(start_str)
+                end_hour = float(end_str)
+                
+                # 日付と時間を組み合わせてdatetime文字列を作成
+                start_dt = f"{date_str}T{int(start_hour):02d}:{int((start_hour % 1) * 60):02d}:00"
+                end_dt = f"{date_str}T{int(end_hour):02d}:{int((end_hour % 1) * 60):02d}:00"
+                
+                result.append([start_dt, end_dt])
+
+        return result
 
     except Exception as e:
         logger.error(f"空き時間の取得に失敗しました: {e}")

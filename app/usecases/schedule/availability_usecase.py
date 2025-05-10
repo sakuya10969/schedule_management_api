@@ -3,9 +3,8 @@ from app.schemas import ScheduleRequest, AvailabilityResponse
 from app.services.schedule_service import ScheduleService
 from app.utils.time import (
     time_string_to_float,
-    slot_to_time,
-    find_common_availability,
-    find_common_availability_participants,
+    find_common_availability_in_date_range,
+    find_common_availability_participants_in_date_range,
 )
 
 logger = logging.getLogger(__name__)
@@ -29,29 +28,64 @@ def _calculate_common_times(schedule_req: ScheduleRequest, schedule_info: dict) 
     end_hour = time_string_to_float(schedule_req.end_time)
     free_slots_list = schedule_service.parse_availability(schedule_info, start_hour, end_hour)
 
-    datetime_tuples = _get_datetime_tuples(schedule_req, free_slots_list)
-    return _format_datetime_tuples(datetime_tuples)
+    return _get_available_slots(schedule_req, free_slots_list)
 
-def _get_datetime_tuples(schedule_req: ScheduleRequest, free_slots_list: list) -> list:
+def _get_available_slots(schedule_req: ScheduleRequest, free_slots_list: list) -> list:
     """必要人数に応じた空き時間を取得"""
-    if len(schedule_req.users) == schedule_req.required_participants:
-        common_slots = find_common_availability(free_slots_list, schedule_req.duration_minutes)
-        return slot_to_time(schedule_req.start_date, common_slots)
-    else:
-        common_slots_users = find_common_availability_participants(
-            free_slots_list,
-            schedule_req.duration_minutes,
-            schedule_req.required_participants,
-            schedule_req.users,
-        )
-        return [
-            slot_to_time(schedule_req.start_date, common_slots) 
-            for common_slots in common_slots_users
-        ]
+    start_hour = time_string_to_float(schedule_req.start_time)
+    end_hour = time_string_to_float(schedule_req.end_time)
 
-def _format_datetime_tuples(datetime_tuples: list) -> list:
-    """datetimeオブジェクトを文字列に変換"""
-    return [
-        [dt1.strftime("%Y-%m-%dT%H:%M:%S"), dt2.strftime("%Y-%m-%dT%H:%M:%S")]
-        for dt1, dt2 in datetime_tuples
-    ]
+    if len(schedule_req.users) == schedule_req.required_participants:
+        # 全員参加の場合
+        available_slots = find_common_availability_in_date_range(
+            free_slots_list=free_slots_list,
+            duration_minutes=schedule_req.duration_minutes,
+            start_date=schedule_req.start_date,
+            end_date=schedule_req.end_date,
+            start_hour=start_hour,
+            end_hour=end_hour
+        )
+        
+        # 結果を整形
+        result = []
+        for date_str, slots in available_slots.items():
+            for slot in slots:
+                start_str, end_str = slot.split(" - ")
+                start_hour = float(start_str)
+                end_hour = float(end_str)
+                
+                # 日付と時間を組み合わせてdatetime文字列を作成
+                start_dt = f"{date_str}T{int(start_hour):02d}:{int((start_hour % 1) * 60):02d}:00"
+                end_dt = f"{date_str}T{int(end_hour):02d}:{int((end_hour % 1) * 60):02d}:00"
+                
+                result.append([start_dt, end_dt])
+        
+        return result
+    else:
+        # 一部参加の場合
+        available_slots = find_common_availability_participants_in_date_range(
+            free_slots_list=free_slots_list,
+            duration_minutes=schedule_req.duration_minutes,
+            required_participants=schedule_req.required_participants,
+            users=schedule_req.users,
+            start_date=schedule_req.start_date,
+            end_date=schedule_req.end_date,
+            start_hour=start_hour,
+            end_hour=end_hour
+        )
+        
+        # 結果を整形
+        result = []
+        for date_str, slots_with_users in available_slots.items():
+            for slot, users in slots_with_users:
+                start_str, end_str = slot.split(" - ")
+                start_hour = float(start_str)
+                end_hour = float(end_str)
+                
+                # 日付と時間を組み合わせてdatetime文字列を作成
+                start_dt = f"{date_str}T{int(start_hour):02d}:{int((start_hour % 1) * 60):02d}:00"
+                end_dt = f"{date_str}T{int(end_hour):02d}:{int((end_hour % 1) * 60):02d}:00"
+                
+                result.append([start_dt, end_dt])
+        
+        return result

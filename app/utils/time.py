@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import List, Set, Tuple, Dict, Union
+from typing import List, Set, Tuple, Dict, Union, Optional
 
 def time_string_to_float(time_str: str) -> float:
     """'HH:MM' 形式の文字列を小数の時間数へ変換する"""
@@ -36,30 +36,6 @@ def parse_slot(start_date: str, common_slot: str) -> Tuple[datetime, datetime]:
 def slot_to_time(start_date: str, common_slots: List[str]) -> List[Tuple[datetime, datetime]]:
     """スロット文字列リストを datetime タプルのリストに変換する"""
     return [parse_slot(start_date, slot) for slot in common_slots]
-
-def find_common_availability(
-    free_slots_list: List[List[Tuple[float, float]]], 
-    duration_minutes: int
-) -> List[str]:
-    """全ユーザーの共通空き時間を探す"""
-    if not free_slots_list:
-        return []
-
-    required_slots = duration_minutes // 30
-    user_availability_sets = [set(slots) for slots in free_slots_list]
-    common_slots = set.intersection(*user_availability_sets)
-    sorted_slots = sorted(common_slots, key=lambda x: x[0])
-
-    # 隣接スロットのグラフを構築
-    adjacency = _build_adjacency_graph(sorted_slots)
-    
-    # 連続コンポーネントを探索
-    components = _find_connected_components(sorted_slots, adjacency)
-    
-    # 必要なスロット数を満たす時間帯を抽出
-    result = _extract_valid_slots(components, required_slots)
-    
-    return sorted(set(result), key=lambda x: float(x.split(" - ")[0]))
 
 def _build_adjacency_graph(
     sorted_slots: List[Tuple[float, float]]
@@ -120,32 +96,6 @@ def _extract_valid_slots(
             
     return result
 
-def find_common_availability_participants(
-    free_slots_list: List[List[Tuple[float, float]]], 
-    duration_minutes: int, 
-    required_participants: int, 
-    users: List[Union[str, object]]
-) -> List[Tuple[str, List[str]]]:
-    """指定人数以上のユーザーが空いている共通時間帯を探す"""
-    if not free_slots_list or required_participants <= 0:
-        return []
-
-    # スロットごとの空きユーザーを集計
-    slot_users = _collect_available_users(free_slots_list, users)
-    
-    # 必要人数を満たすスロットを抽出
-    available_slots = _filter_slots_by_participants(slot_users, required_participants)
-    
-    if not available_slots:
-        return []
-
-    # 連続スロットをグループ化
-    required_slots = (duration_minutes + 29) // 30
-    continuous_groups = _group_continuous_slots(available_slots)
-    
-    # 有効な時間枠を抽出
-    return _extract_valid_time_windows(continuous_groups, required_slots, required_participants)
-
 def _collect_available_users(
     free_slots_list: List[List[Tuple[float, float]]], 
     users: List[Union[str, object]]
@@ -176,6 +126,9 @@ def _group_continuous_slots(
     available_slots: List[Tuple[Tuple[float, float], List[str]]]
 ) -> List[List[Tuple[Tuple[float, float], List[str]]]]:
     """連続するスロットをグループ化"""
+    if not available_slots:
+        return []
+        
     continuous_groups = []
     current_group = [available_slots[0]]
     
@@ -225,3 +178,141 @@ def _get_common_users(users: List[Union[str, object]]) -> Set[str]:
         user.email if hasattr(user, 'email') else user 
         for user in users
     }
+
+def _find_common_slots_for_date(
+    free_slots_list: List[List[Tuple[float, float]]],
+    duration_minutes: int,
+    start_hour: float,
+    end_hour: float
+) -> List[str]:
+    """指定された日付の指定時間帯における共通空き時間を探す"""
+    # 各ユーザーの空き時間を指定時間帯でフィルタリング
+    filtered_slots = []
+    for user_slots in free_slots_list:
+        filtered_user_slots = [
+            slot for slot in user_slots
+            if start_hour <= slot[0] and slot[1] <= end_hour
+        ]
+        filtered_slots.append(filtered_user_slots)
+
+    if not filtered_slots:
+        return []
+
+    required_slots = duration_minutes // 30
+    user_availability_sets = [set(slots) for slots in filtered_slots]
+    common_slots = set.intersection(*user_availability_sets)
+    sorted_slots = sorted(common_slots, key=lambda x: x[0])
+
+    # 隣接スロットのグラフを構築
+    adjacency = _build_adjacency_graph(sorted_slots)
+    
+    # 連続コンポーネントを探索
+    components = _find_connected_components(sorted_slots, adjacency)
+    
+    # 必要なスロット数を満たす時間帯を抽出
+    result = _extract_valid_slots(components, required_slots)
+    
+    return sorted(set(result), key=lambda x: float(x.split(" - ")[0]))
+
+def _find_common_slots_with_participants_for_date(
+    free_slots_list: List[List[Tuple[float, float]]],
+    duration_minutes: int,
+    required_participants: int,
+    users: List[Union[str, object]],
+    start_hour: float,
+    end_hour: float
+) -> List[Tuple[str, List[str]]]:
+    """指定された日付の指定時間帯における指定人数以上のユーザーが空いている共通時間帯を探す"""
+    # 各ユーザーの空き時間を指定時間帯でフィルタリング
+    filtered_slots = []
+    for user_slots in free_slots_list:
+        filtered_user_slots = [
+            slot for slot in user_slots
+            if start_hour <= slot[0] and slot[1] <= end_hour
+        ]
+        filtered_slots.append(filtered_user_slots)
+
+    if not filtered_slots or required_participants <= 0:
+        return []
+
+    # スロットごとの空きユーザーを集計
+    slot_users = _collect_available_users(filtered_slots, users)
+    
+    # 必要人数を満たすスロットを抽出
+    available_slots = _filter_slots_by_participants(slot_users, required_participants)
+    
+    if not available_slots:
+        return []
+
+    # 連続スロットをグループ化
+    required_slots = (duration_minutes + 29) // 30
+    continuous_groups = _group_continuous_slots(available_slots)
+    
+    # 有効な時間枠を抽出
+    return _extract_valid_time_windows(continuous_groups, required_slots, required_participants)
+
+def find_common_availability_in_date_range(
+    free_slots_list: List[List[Tuple[float, float]]], 
+    duration_minutes: int,
+    start_date: str,
+    end_date: str,
+    start_hour: float,
+    end_hour: float
+) -> Dict[str, List[str]]:
+    """指定された日付範囲内で、各日付の指定時間帯における共通空き時間を探す"""
+    if not free_slots_list:
+        return {}
+
+    start_datetime = datetime.strptime(start_date, "%Y-%m-%d")
+    end_datetime = datetime.strptime(end_date, "%Y-%m-%d")
+    current_date = start_datetime
+    result = {}
+
+    while current_date <= end_datetime:
+        current_date_str = current_date.strftime("%Y-%m-%d")
+        common_slots = _find_common_slots_for_date(
+            free_slots_list,
+            duration_minutes,
+            start_hour,
+            end_hour
+        )
+        if common_slots:
+            result[current_date_str] = common_slots
+        current_date += timedelta(days=1)
+
+    return result
+
+def find_common_availability_participants_in_date_range(
+    free_slots_list: List[List[Tuple[float, float]]], 
+    duration_minutes: int, 
+    required_participants: int, 
+    users: List[Union[str, object]],
+    start_date: str,
+    end_date: str,
+    start_hour: float,
+    end_hour: float
+) -> Dict[str, List[Tuple[str, List[str]]]]:
+    """指定された日付範囲内で、各日付の指定時間帯における指定人数以上のユーザーが空いている共通時間帯を探す"""
+    if not free_slots_list or required_participants <= 0:
+        return {}
+
+    start_datetime = datetime.strptime(start_date, "%Y-%m-%d")
+    end_datetime = datetime.strptime(end_date, "%Y-%m-%d")
+    current_date = start_datetime
+    result = {}
+
+    while current_date <= end_datetime:
+        current_date_str = current_date.strftime("%Y-%m-%d")
+        common_slots = _find_common_slots_with_participants_for_date(
+            free_slots_list,
+            duration_minutes,
+            required_participants,
+            users,
+            start_hour,
+            end_hour
+        )
+        if common_slots:
+            result[current_date_str] = common_slots
+        current_date += timedelta(days=1)
+
+    return result
