@@ -1,41 +1,46 @@
 import logging
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Body
-from app.usecases.schedule_usecase import (
-    get_availability_usecase,
-    create_appointment_usecase,
-    reschedule_usecase,
-)
-from app.schemas import ScheduleRequest, AppointmentRequest, AvailabilityResponse, AppointmentResponse
+from fastapi.responses import RedirectResponse, HTMLResponse
+from app.schemas import ScheduleRequest, AppointmentRequest, AppointmentResponse, AvailabilityResponse
+
+# ユースケースのインポート
+from app.usecases.availability import get_availability_usecase
+from app.usecases.appointment import create_appointment_usecase
+from app.usecases.reschedule import reschedule_usecase
 
 router = APIRouter(tags=["schedule"])
 logger = logging.getLogger(__name__)
 
 @router.post("/get_availability", response_model=AvailabilityResponse)
 async def get_availability(schedule_req: ScheduleRequest):
-    """指定されたユーザリストと日付・時間帯における空き時間候補を返す"""
+    """指定されたユーザリストと時間帯における空き時間を返す"""
     try:
-        result = await get_availability_usecase(schedule_req)
-        return result
+        return await get_availability_usecase(schedule_req)
     except Exception as e:
-        logger.error(f"候補日の取得に失敗しました: {e}")
-        raise HTTPException(status_code=500, detail="候補日の取得に失敗しました")
+        logger.error(f"空き時間取得に失敗: {e}")
+        raise HTTPException(status_code=500, detail="空き時間取得エラー")
+
 
 @router.post("/appointment", response_model=AppointmentResponse)
-async def create_appointment(background_tasks: BackgroundTasks, appointment_req: AppointmentRequest = Body(...)):
-    """面接担当者の予定表に予定を登録する"""
+async def create_appointment(
+    background_tasks: BackgroundTasks, appointment_req: AppointmentRequest = Body(...)
+):
+    """面接担当者の予定を登録し、確認メールを送信"""
     try:
-        result = await create_appointment_usecase(appointment_req, background_tasks)
-        return result
+        return await create_appointment_usecase(background_tasks, appointment_req)
     except Exception as e:
-        logger.error(f"予定作成エラー: {str(e)}")
-        raise HTTPException(status_code=500, detail="予定作成中にエラーが発生しました")
+        logger.error(f"予定作成エラー: {e}")
+        raise HTTPException(status_code=500, detail="予定作成エラー")
+
 
 @router.get("/reschedule")
-async def reschedule(token: str = Query(...), confirm: bool = Query(False)):
-    """日程の再調整リンクを処理"""
+async def reschedule(
+    token: str = Query(..., description="フォームのトークン"),
+    confirm: bool = Query(False, description="キャンセル処理確認フラグ"),
+):
+    """日程再調整の確認および実行"""
     try:
-        result = await reschedule_usecase(token, confirm)
-        return result
+        return await reschedule_usecase(token, confirm)
     except Exception as e:
-        logger.error(f"リスケジュールエラー: {str(e)}")
-        raise HTTPException(status_code=500, detail="リスケジュール中にエラーが発生しました")
+        logger.error(f"リスケジュールエラー: {e}")
+        raise HTTPException(status_code=500, detail="リスケジュールエラー")
