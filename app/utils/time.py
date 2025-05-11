@@ -37,10 +37,12 @@ def slot_to_time(start_date: str, common_slots: List[str]) -> List[Tuple[datetim
     """スロット文字列リストを datetime タプルのリストに変換する"""
     return [parse_slot(start_date, slot) for slot in common_slots]
 
-def _build_adjacency_graph(
-    sorted_slots: List[Tuple[float, float]]
-) -> Dict[Tuple[float, float], List[Tuple[float, float]]]:
-    """隣接スロットのグラフを構築"""
+def find_continuous_slots(sorted_slots: List[Tuple[float, float]], required_slots: int) -> List[str]:
+    """連続する時間枠を見つける"""
+    if not sorted_slots:
+        return []
+
+    # 隣接スロットのグラフを構築
     adjacency = {slot: [] for slot in sorted_slots}
     
     for i in range(len(sorted_slots) - 1):
@@ -49,16 +51,9 @@ def _build_adjacency_graph(
         
         if abs(curr_slot[1] - next_slot[0]) < 1e-2:
             adjacency[curr_slot].append(next_slot)
-        if abs(next_slot[1] - curr_slot[0]) < 1e-2:
             adjacency[next_slot].append(curr_slot)
-            
-    return adjacency
 
-def _find_connected_components(
-    sorted_slots: List[Tuple[float, float]], 
-    adjacency: Dict[Tuple[float, float], List[Tuple[float, float]]]
-) -> List[List[Tuple[float, float]]]:
-    """連続するスロットのコンポーネントを探索"""
+    # 連続コンポーネントを探索
     visited = set()
     components = []
     
@@ -78,14 +73,8 @@ def _find_connected_components(
                         queue.append(neighbor)
                         
             components.append(sorted(component, key=lambda x: x[0]))
-            
-    return components
 
-def _extract_valid_slots(
-    components: List[List[Tuple[float, float]]], 
-    required_slots: int
-) -> List[str]:
-    """必要なスロット数を満たす時間帯を抽出"""
+    # 必要なスロット数を満たす時間帯を抽出
     result = []
     
     for component in components:
@@ -93,14 +82,20 @@ def _extract_valid_slots(
             start = component[i][0]
             end = component[i + required_slots - 1][1]
             result.append(f"{start} - {end}")
-            
-    return result
 
-def _collect_available_users(
-    free_slots_list: List[List[Tuple[float, float]]], 
-    users: List[Union[str, object]]
-) -> Dict[Tuple[float, float], List[str]]:
-    """各スロットで空いているユーザーを収集"""
+    return sorted(set(result), key=lambda x: float(x.split(" - ")[0]))
+
+def find_slots_with_participants(
+    free_slots_list: List[List[Tuple[float, float]]],
+    users: List[Union[str, object]],
+    required_participants: int,
+    required_slots: int
+) -> List[Tuple[str, List[str]]]:
+    """必要な参加者数を満たす連続スロットを見つける"""
+    if not free_slots_list or required_participants <= 0:
+        return []
+
+    # スロットごとの空きユーザーを収集
     slot_users = {}
     for i, user_slots in enumerate(free_slots_list):
         user = users[i] if i < len(users) else f"User-{i}"
@@ -108,27 +103,17 @@ def _collect_available_users(
             if slot not in slot_users:
                 slot_users[slot] = []
             slot_users[slot].append(user)
-    return slot_users
 
-def _filter_slots_by_participants(
-    slot_users: Dict[Tuple[float, float], List[str]], 
-    required_participants: int
-) -> List[Tuple[Tuple[float, float], List[str]]]:
-    """必要人数を満たすスロットをフィルタリング"""
-    available_slots = [
-        (slot, users) 
-        for slot, users in slot_users.items() 
-        if len(users) >= required_participants
-    ]
-    return sorted(available_slots, key=lambda x: x[0][0])
+    # 必要人数を満たすスロットを抽出
+    available_slots = sorted(
+        [(slot, users) for slot, users in slot_users.items() if len(users) >= required_participants],
+        key=lambda x: x[0][0]
+    )
 
-def _group_continuous_slots(
-    available_slots: List[Tuple[Tuple[float, float], List[str]]]
-) -> List[List[Tuple[Tuple[float, float], List[str]]]]:
-    """連続するスロットをグループ化"""
     if not available_slots:
         return []
-        
+
+    # 連続スロットをグループ化
     continuous_groups = []
     current_group = [available_slots[0]]
     
@@ -143,41 +128,27 @@ def _group_continuous_slots(
             current_group = [available_slots[i]]
             
     continuous_groups.append(current_group)
-    return continuous_groups
 
-def _extract_valid_time_windows(
-    continuous_groups: List[List[Tuple[Tuple[float, float], List[str]]]], 
-    required_slots: int,
-    required_participants: int
-) -> List[Tuple[str, List[str]]]:
-    """有効な時間枠を抽出"""
+    # 有効な時間枠を抽出
     result = []
-    
     for group in continuous_groups:
         if len(group) < required_slots:
             continue
             
         for i in range(len(group) - required_slots + 1):
             window = group[i:i + required_slots]
-            common_users = _get_common_users(window[0][1])
+            common_users = set(user.email if hasattr(user, 'email') else user for user in window[0][1])
             
             for _, users_list in window[1:]:
-                common_users &= _get_common_users(users_list)
+                common_users &= set(user.email if hasattr(user, 'email') else user for user in users_list)
                 
             if len(common_users) >= required_participants:
                 start_slot = window[0][0]
                 end_slot = window[-1][0]
                 slot_str = f"{start_slot[0]} - {end_slot[1]}"
                 result.append((slot_str, list(common_users)))
-                
-    return result
 
-def _get_common_users(users: List[Union[str, object]]) -> Set[str]:
-    """ユーザーリストから共通ユーザーを抽出"""
-    return {
-        user.email if hasattr(user, 'email') else user 
-        for user in users
-    }
+    return result
 
 def _find_common_slots_for_date(
     free_slots_list: List[List[Tuple[float, float]]],
@@ -203,16 +174,7 @@ def _find_common_slots_for_date(
     common_slots = set.intersection(*user_availability_sets)
     sorted_slots = sorted(common_slots, key=lambda x: x[0])
 
-    # 隣接スロットのグラフを構築
-    adjacency = _build_adjacency_graph(sorted_slots)
-    
-    # 連続コンポーネントを探索
-    components = _find_connected_components(sorted_slots, adjacency)
-    
-    # 必要なスロット数を満たす時間帯を抽出
-    result = _extract_valid_slots(components, required_slots)
-    
-    return sorted(set(result), key=lambda x: float(x.split(" - ")[0]))
+    return find_continuous_slots(sorted_slots, required_slots)
 
 def _find_common_slots_with_participants_for_date(
     free_slots_list: List[List[Tuple[float, float]]],
@@ -235,21 +197,8 @@ def _find_common_slots_with_participants_for_date(
     if not filtered_slots or required_participants <= 0:
         return []
 
-    # スロットごとの空きユーザーを集計
-    slot_users = _collect_available_users(filtered_slots, users)
-    
-    # 必要人数を満たすスロットを抽出
-    available_slots = _filter_slots_by_participants(slot_users, required_participants)
-    
-    if not available_slots:
-        return []
-
-    # 連続スロットをグループ化
     required_slots = (duration_minutes + 29) // 30
-    continuous_groups = _group_continuous_slots(available_slots)
-    
-    # 有効な時間枠を抽出
-    return _extract_valid_time_windows(continuous_groups, required_slots, required_participants)
+    return find_slots_with_participants(filtered_slots, users, required_participants, required_slots)
 
 def find_common_availability_in_date_range(
     free_slots_list: List[List[Tuple[float, float]]], 
