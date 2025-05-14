@@ -23,20 +23,6 @@ def parse_time_str_to_datetime(start_date: str, float_hour: float) -> datetime:
         minutes
     )
 
-def parse_slot(start_date: str, common_slot: str) -> Tuple[datetime, datetime]:
-    """時間範囲文字列から開始・終了時刻を datetime で返す"""
-    start_str, end_str = map(str.strip, common_slot.split("-"))
-    start_hour, end_hour = float(start_str), float(end_str)
-    
-    return (
-        parse_time_str_to_datetime(start_date, start_hour),
-        parse_time_str_to_datetime(start_date, end_hour)
-    )
-
-def slot_to_time(start_date: str, common_slots: List[str]) -> List[Tuple[datetime, datetime]]:
-    """スロット文字列リストを datetime タプルのリストに変換する"""
-    return [parse_slot(start_date, slot) for slot in common_slots]
-
 def find_continuous_slots(sorted_slots: List[Tuple[float, float]], required_slots: int) -> List[str]:
     """連続する時間枠を見つける"""
     if not sorted_slots:
