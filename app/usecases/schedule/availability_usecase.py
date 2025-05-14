@@ -1,8 +1,8 @@
 import logging
 from app.schemas import ScheduleRequest, AvailabilityResponse
 from app.services.schedule_service import ScheduleService
-from app.utils.time import (
-    time_string_to_float,
+from app.utils.time import time_string_to_float
+from app.utils.availability import (
     find_common_availability_in_date_range,
     find_common_availability_participants_in_date_range,
 )

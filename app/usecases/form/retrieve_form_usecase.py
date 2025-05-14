@@ -4,10 +4,8 @@ from fastapi import HTTPException
 from app.schemas import ScheduleRequest, FormData
 from app.infrastructure.az_cosmos import AzCosmosDBClient
 from app.infrastructure.graph_api import GraphAPIClient
-from app.utils.time import (
-    time_string_to_float,
-    find_common_availability_in_date_range,
-)
+from app.utils.time import time_string_to_float
+from app.utils.availability import find_common_availability_in_date_range
 
 logger = logging.getLogger(__name__)
 
