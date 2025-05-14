@@ -52,6 +52,7 @@ class FormData(BaseModel):
     selected_days: List[str]
     duration_minutes: int
     users: List[User]
+    required_participants: int
     time_zone: str = "Tokyo Standard Time"
     isConfirmed: bool = False
     candidates: List[List[str]] | None = None
