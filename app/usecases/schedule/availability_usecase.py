@@ -20,7 +20,33 @@ async def get_availability_usecase(schedule_req: ScheduleRequest) -> Availabilit
         return AvailabilityResponse(common_availability=common_times)
 
     except Exception as e:
-        logger.error(f"空き時間取得ユースケースに失敗しました: {e}")
+        import traceback
+        import json
+        from datetime import datetime
+
+        error_detail = {
+            "timestamp": datetime.now().isoformat(),
+            "error": {
+                "type": type(e).__name__,
+                "message": str(e),
+                "traceback": traceback.format_exc()
+            },
+            "request_data": {
+                "start_date": schedule_req.start_date,
+                "end_date": schedule_req.end_date,
+                "start_time": schedule_req.start_time,
+                "end_time": schedule_req.end_time,
+                "duration_minutes": schedule_req.duration_minutes,
+                "users": [user.email for user in schedule_req.users] if schedule_req.users else [],
+                "required_participants": schedule_req.required_participants,
+                "time_zone": schedule_req.time_zone
+            },
+            "schedule_info": schedule_info if 'schedule_info' in locals() else None,
+            "common_times": common_times if 'common_times' in locals() else None
+        }
+
+        # エラー情報をJSON形式でログ出力
+        logger.error(f"空き時間取得ユースケースに失敗しました: {json.dumps(error_detail, ensure_ascii=False, indent=2)}")
         raise
 
 def _calculate_common_times(schedule_req: ScheduleRequest, schedule_info: Dict[str, Any]) -> List[List[str]]:

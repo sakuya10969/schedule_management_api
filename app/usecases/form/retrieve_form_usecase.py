@@ -78,5 +78,30 @@ def _get_available_slots(schedule_request: ScheduleRequest) -> List[List[str]]:
         return result
 
     except Exception as e:
-        logger.error(f"空き時間の取得に失敗しました: {e}")
+        import traceback
+        import json
+        from datetime import datetime
+
+        error_info = {
+            "timestamp": datetime.now().isoformat(),
+            "error": {
+                "type": type(e).__name__,
+                "message": str(e),
+                "traceback": traceback.format_exc()
+            },
+            "request_data": {
+                "start_date": schedule_request.start_date,
+                "end_date": schedule_request.end_date,
+                "start_time": schedule_request.start_time,
+                "end_time": schedule_request.end_time,
+                "duration_minutes": schedule_request.duration_minutes,
+                "user_email": schedule_request.users[0].email if schedule_request.users else None
+            },
+            "schedule_info": schedule_info if 'schedule_info' in locals() else None,
+            "available_slots": available_slots if 'available_slots' in locals() else None,
+            "result": result if 'result' in locals() else None
+        }
+
+        # エラー情報をJSON形式でログ出力
+        logger.error(f"空き時間の取得に失敗しました: {json.dumps(error_info, ensure_ascii=False, indent=2)}")
         return []
