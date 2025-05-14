@@ -31,24 +31,28 @@ class ScheduleService:
     def parse_availability(self, schedule_data: Dict[str, Any], start_hour: float, end_hour: float) -> List[List[Tuple[float, float]]]:
         """空き時間をパースする"""
         schedules_info = schedule_data.get("value", [])
-        return [
-            self._get_free_slots(schedule, start_hour, end_hour)
-            for schedule in schedules_info
-        ]
-
-    def _get_free_slots(self, schedule: Dict[str, Any], start_hour: float, end_hour: float) -> List[Tuple[float, float]]:
-        """個別のスケジュールから空き時間を抽出"""
         slot_duration = 0.5
-        availability_view = schedule.get("availabilityView", "")
         
-        return [
-            (start_hour + i * slot_duration, start_hour + (i + 1) * slot_duration)
-            for i, status in enumerate(availability_view)
-            if status == "0" and start_hour + (i + 1) * slot_duration <= end_hour
-        ]
+        result = []
+        for schedule in schedules_info:
+            availability_view = schedule.get("availabilityView", "")
+            free_slots = [
+                (start_hour + i * slot_duration, start_hour + (i + 1) * slot_duration)
+                for i, status in enumerate(availability_view)
+                if status == "0" and start_hour + (i + 1) * slot_duration <= end_hour
+            ]
+            result.append(free_slots)
+        
+        return result
 
-    def create_event_payload(self, appointment_req: AppointmentRequest, start_str: str, end_str: str) -> Dict[str, Any]:
-        """イベントペイロードを生成"""
+    def handle_appointment(self, appointment_req: AppointmentRequest) -> Dict[str, Any]:
+        """予約を処理し、イベントを作成してメールを送信する"""
+        if not appointment_req.candidate:
+            return {}
+            
+        start_str, end_str = appointment_req.candidate.split(",")
+        
+        # イベントペイロードを作成
         subject = f"【{appointment_req.company}/{appointment_req.lastname}{appointment_req.firstname}様】日程確定"
         body = (
             f"氏名: {appointment_req.lastname} {appointment_req.firstname}<br>"
@@ -57,7 +61,7 @@ class ScheduleService:
             f"日程: {format_candidate_date(appointment_req.candidate)}"
         )
         
-        return {
+        event = {
             "subject": subject,
             "body": {
                 "contentType": "HTML",
@@ -69,11 +73,17 @@ class ScheduleService:
             "isOnlineMeeting": True,
             "onlineMeetingProvider": "teamsForBusiness",
         }
-
-    def register_event(self, user_email: str, event: Dict[str, Any]) -> Dict[str, Any]:
-        """イベントを登録"""
-        return self.graph_client.retry_operation(self.graph_client.register_event, user_email, event)
-
-    def send_email(self, sender_email: str, to_email: str, subject: str, body: str) -> None:
-        """メールを送信"""
-        self.graph_client.send_email(sender_email, to_email, subject, body)
+        
+        # イベントを登録
+        result = {}
+        for user_email in appointment_req.users:
+            result[user_email] = self.graph_client.retry_operation(
+                self.graph_client.register_event, 
+                user_email, 
+                event
+            )
+            
+            # メール送信
+            self.graph_client.send_email(user_email, appointment_req.email, subject, body)
+            
+        return result
