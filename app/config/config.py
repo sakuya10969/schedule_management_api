@@ -18,7 +18,7 @@ CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 GRAPH_API_BASE_URL = "https://graph.microsoft.com/v1.0/"
 GRAPH_API_BETA_URL = "https://graph.microsoft.com/beta/"
 # フロントエンドURL
-CLIENT_URL = "http://localhost:3000"
+CLIENT_URL = "http://localhost:5173"
 # バックエンドURL
 API_URL = "http://127.0.0.1:8000"
 # システム送信者メールアドレス
