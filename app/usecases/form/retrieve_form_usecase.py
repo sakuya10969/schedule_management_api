@@ -28,6 +28,7 @@ async def retrieve_form_data_usecase(token: str) -> FormData:
                 selected_days=form_data["selected_days"],
                 duration_minutes=form_data["duration_minutes"],
                 users=form_data["users"],
+                required_participants=form_data["required_participants"],
                 time_zone="Tokyo Standard Time",
             )
             form_data["candidates"] = _get_available_slots(schedule_request)
