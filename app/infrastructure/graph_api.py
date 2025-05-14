@@ -29,7 +29,8 @@ class GraphAPIClient:
 
     def get_schedules(self, target_user_email: str, body: Dict[str, Any]) -> Dict[str, Any]:
         """スケジュールを取得するためのGraph API呼び出し"""
-        url = f"https://graph.microsoft.com/v1.0/users/{urllib.parse.quote(target_user_email)}/calendar/getSchedule"
+        encoded_email = urllib.parse.quote(target_user_email)
+        url = f"https://graph.microsoft.com/v1.0/users/{encoded_email}/calendar/getSchedule"
         return self.post_request(url, body)
 
     def register_event(self, user_email: str, event: Dict[str, Any]) -> Dict[str, Any]:
