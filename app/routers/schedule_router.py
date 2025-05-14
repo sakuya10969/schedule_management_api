@@ -1,6 +1,5 @@
 import logging
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Body
-from fastapi.responses import RedirectResponse, HTMLResponse
 from app.schemas import ScheduleRequest, AppointmentRequest, AppointmentResponse, AvailabilityResponse
 
 # ユースケースのインポート
