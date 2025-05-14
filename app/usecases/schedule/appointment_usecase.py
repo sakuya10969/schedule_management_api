@@ -1,5 +1,6 @@
 import logging
 from fastapi import BackgroundTasks
+from typing import List, Dict, Any
 
 from app.schemas import AppointmentRequest, AppointmentResponse
 from app.infrastructure.graph_api import GraphAPIClient
@@ -68,7 +69,7 @@ def _parse_and_create_event(appointment_req: AppointmentRequest) -> tuple:
         logger.error(f"候補日パース失敗: {e}")
         raise
 
-def _register_and_store_events(appointment_req: AppointmentRequest, event: dict) -> list:
+def _register_and_store_events(appointment_req: AppointmentRequest, event: Dict[str, Any]) -> List[Dict[str, Any]]:
     """イベントを登録し、IDを保存"""
     graph_api_client = GraphAPIClient()
     created_events = []

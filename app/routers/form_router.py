@@ -1,6 +1,7 @@
 import logging
 from fastapi import APIRouter, HTTPException, Query, Body
 from fastapi.responses import JSONResponse
+from typing import Dict, Any
 
 from app.schemas import FormData
 from app.usecases.form.store_form_data_usecase import store_form_data_usecase
@@ -9,7 +10,7 @@ from app.usecases.form.retrieve_form_usecase import retrieve_form_data_usecase
 router = APIRouter(tags=["forms"])
 logger = logging.getLogger(__name__)
 
-@router.post("/store_form_data", response_model=dict)
+@router.post("/store_form_data", response_model=Dict[str, Any])
 async def store_form_data(payload: FormData = Body(...)):
     """
     フォームデータを保存し、一意のトークンを返すエンドポイント

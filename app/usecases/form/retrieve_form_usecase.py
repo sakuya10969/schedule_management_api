@@ -1,5 +1,6 @@
 import logging
 from fastapi import HTTPException
+from typing import List
 
 from app.schemas import ScheduleRequest, FormData
 from app.infrastructure.az_cosmos import AzCosmosDBClient
@@ -37,7 +38,7 @@ async def retrieve_form_data_usecase(token: str) -> FormData:
         logger.error(f"フォームデータが見つかりません: {e}")
         raise HTTPException(status_code=404, detail="Token not found")
 
-def _get_available_slots(schedule_request: ScheduleRequest) -> list:
+def _get_available_slots(schedule_request: ScheduleRequest) -> List[List[str]]:
     """空き時間スロットを取得して整形"""
     try:
         graph_api_client = GraphAPIClient()

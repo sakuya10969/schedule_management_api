@@ -5,6 +5,7 @@ from typing import Dict, List, Any
 from fastapi import HTTPException
 from dateutil.parser import parse
 from azure.cosmos import CosmosClient, exceptions
+
 from app.config.config import get_config
 
 logger = logging.getLogger(__name__)

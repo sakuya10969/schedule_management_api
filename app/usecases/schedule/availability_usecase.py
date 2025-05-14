@@ -1,4 +1,6 @@
 import logging
+from typing import Dict, List, Any
+
 from app.schemas import ScheduleRequest, AvailabilityResponse
 from app.services.schedule_service import ScheduleService
 from app.utils.time import time_string_to_float
@@ -21,7 +23,7 @@ async def get_availability_usecase(schedule_req: ScheduleRequest) -> Availabilit
         logger.error(f"空き時間取得ユースケースに失敗しました: {e}")
         raise
 
-def _calculate_common_times(schedule_req: ScheduleRequest, schedule_info: dict) -> list:
+def _calculate_common_times(schedule_req: ScheduleRequest, schedule_info: Dict[str, Any]) -> List[List[str]]:
     """共通の空き時間を計算"""
     schedule_service = ScheduleService()
     start_hour = time_string_to_float(schedule_req.start_time)
@@ -30,7 +32,7 @@ def _calculate_common_times(schedule_req: ScheduleRequest, schedule_info: dict) 
 
     return _get_available_slots(schedule_req, free_slots_list)
 
-def _get_available_slots(schedule_req: ScheduleRequest, free_slots_list: list) -> list:
+def _get_available_slots(schedule_req: ScheduleRequest, free_slots_list: List[List[str]]) -> List[List[str]]:
     """必要人数に応じた空き時間を取得"""
     start_hour = time_string_to_float(schedule_req.start_time)
     end_hour = time_string_to_float(schedule_req.end_time)
