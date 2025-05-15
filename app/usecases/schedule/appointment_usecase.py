@@ -5,7 +5,7 @@ from typing import List, Dict, Any
 from app.schemas import AppointmentRequest, AppointmentResponse
 from app.infrastructure.graph_api import GraphAPIClient
 from app.infrastructure.az_cosmos import AzCosmosDBClient
-from app.utils.formatter import parse_candidate, format_candidate_date
+from app.utils.formatting import parse_candidate, format_candidate_date
 from app.config.config import get_config
 
 logger = logging.getLogger(__name__)

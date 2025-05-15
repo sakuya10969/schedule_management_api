@@ -5,8 +5,11 @@ from typing import List
 from app.schemas import ScheduleRequest, FormData
 from app.infrastructure.az_cosmos import AzCosmosDBClient
 from app.infrastructure.graph_api import GraphAPIClient
-from app.utils.time import time_string_to_float
-from app.utils.availability import find_common_availability_in_date_range
+from app.utils.time import (
+    time_string_to_float,
+    find_common_availability_in_date_range,
+    format_availability_result
+)
 
 logger = logging.getLogger(__name__)
 
@@ -67,21 +70,7 @@ def _get_available_slots(schedule_request: ScheduleRequest) -> List[List[str]]:
             end_hour=end_hour
         )
 
-        # 結果を整形
-        result = []
-        for date_str, slots in available_slots.items():
-            for slot in slots:
-                start_str, end_str = slot.split(" - ")
-                start_hour = float(start_str)
-                end_hour = float(end_str)
-                
-                # 日付と時間を組み合わせてdatetime文字列を作成
-                start_dt = f"{date_str}T{int(start_hour):02d}:{int((start_hour % 1) * 60):02d}:00"
-                end_dt = f"{date_str}T{int(end_hour):02d}:{int((end_hour % 1) * 60):02d}:00"
-                
-                result.append([start_dt, end_dt])
-
-        return result
+        return format_availability_result(available_slots)
 
     except Exception as e:
         logger.error(f"空き時間の取得に失敗しました: {e}")
