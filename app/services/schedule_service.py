@@ -13,20 +13,40 @@ class ScheduleService:
 
     def get_schedules(self, schedule_req: ScheduleRequest) -> Dict[str, Any]:
         """スケジュールを取得する"""
-        target_user_email = schedule_req.users[0].email
-        body = {
-            "schedules": [user.email for user in schedule_req.users],
-            "startTime": {
-                "dateTime": f"{schedule_req.start_date}T{schedule_req.start_time}:00",
-                "timeZone": schedule_req.time_zone,
-            },
-            "endTime": {
-                "dateTime": f"{schedule_req.end_date}T{schedule_req.end_time}:00",
-                "timeZone": schedule_req.time_zone,
-            },
-            "availabilityViewInterval": 30,
-        }
-        return self.graph_client.get_schedules(target_user_email, body)
+        try:
+            target_user_email = schedule_req.users[0].email
+            user_emails = [user.email for user in schedule_req.users]
+            
+            return self.graph_client.get_schedules(
+                target_user_email=target_user_email,
+                schedules=user_emails,
+                start_date=schedule_req.start_date,
+                end_date=schedule_req.end_date,
+                start_time=schedule_req.start_time,
+                end_time=schedule_req.end_time,
+                time_zone=schedule_req.time_zone,
+                interval_minutes=schedule_req.duration_minutes
+            )
+        except Exception as e:
+            import traceback
+            import json
+            from datetime import datetime
+
+            error_detail = {
+                "timestamp": datetime.now().isoformat(),
+                "error": {
+                    "type": type(e).__name__,
+                    "message": str(e),
+                    "traceback": traceback.format_exc()
+                },
+                "request_data": {
+                    "target_user_email": target_user_email if 'target_user_email' in locals() else None,
+                    "user_emails": user_emails if 'user_emails' in locals() else None,
+                    "schedule_request": schedule_req.model_dump() if schedule_req else None
+                }
+            }
+            logger.error(f"スケジュール取得に失敗: {json.dumps(error_detail, ensure_ascii=False, indent=2)}")
+            raise
 
     def parse_availability(self, schedule_data: Dict[str, Any], start_hour: float, end_hour: float) -> List[List[Tuple[float, float]]]:
         """空き時間をパースする"""
