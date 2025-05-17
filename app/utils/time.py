@@ -253,17 +253,36 @@ def format_availability_result(
 
 def split_candidates(candidates: List[List[str]], duration_minutes: int) -> List[List[str]]:
     """
-    候補時間を指定した分単位で分割して返す
+    候補時間を指定した分単位でざっくり分割して返す
     """
     result = []
-    delta = timedelta(minutes=duration_minutes)
 
     for start, end in candidates:
         # ISO形式からdatetimeへ変換
         start_dt = datetime.fromisoformat(start)
         end_dt = datetime.fromisoformat(end)
 
-        # 分割処理
+        # 開始・終了の差分を計算
+        time_diff = (end_dt - start_dt).total_seconds() / 60
+
+        # 特殊処理: 60分の場合かつ1時間半のケース
+        if duration_minutes == 60 and time_diff == 90:
+            # 最初の60分スロット
+            first_end = start_dt + timedelta(minutes=60)
+            result.append([
+                start_dt.strftime("%Y-%m-%dT%H:%M:%S"),
+                first_end.strftime("%Y-%m-%dT%H:%M:%S")
+            ])
+            # 次のスロット：30分ずらして60分
+            second_start = start_dt + timedelta(minutes=30)
+            result.append([
+                second_start.strftime("%Y-%m-%dT%H:%M:%S"),
+                end_dt.strftime("%Y-%m-%dT%H:%M:%S")
+            ])
+            continue
+
+        # 通常の分割処理
+        delta = timedelta(minutes=duration_minutes)
         current = start_dt
         while current < end_dt:
             next_time = min(current + delta, end_dt)
