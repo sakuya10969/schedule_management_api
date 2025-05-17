@@ -250,3 +250,27 @@ def format_availability_result(
                 start_dt, end_dt = format_slot_to_datetime_str(date_str, slot)
                 result.append([start_dt, end_dt])
     return result
+
+def split_candidates(candidates: List[List[str]], duration_minutes: int) -> List[List[str]]:
+    """
+    候補時間を指定した分単位で分割して返す
+    """
+    result = []
+    delta = timedelta(minutes=duration_minutes)
+
+    for start, end in candidates:
+        # ISO形式からdatetimeへ変換
+        start_dt = datetime.fromisoformat(start)
+        end_dt = datetime.fromisoformat(end)
+
+        # 分割処理
+        current = start_dt
+        while current < end_dt:
+            next_time = min(current + delta, end_dt)
+            result.append([
+                current.strftime("%Y-%m-%dT%H:%M:%S"),
+                next_time.strftime("%Y-%m-%dT%H:%M:%S")
+            ])
+            current = next_time
+
+    return result
