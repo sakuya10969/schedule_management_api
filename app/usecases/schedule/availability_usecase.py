@@ -15,33 +15,13 @@ logger = logging.getLogger(__name__)
 async def get_availability_usecase(schedule_req: ScheduleRequest) -> AvailabilityResponse:
     """ユーザーの空き時間を計算して返すユースケース"""
     try:
-        schedule_info = get_schedules(schedule_req)
+        graph_client = GraphAPIClient()
+        schedule_info = graph_client.get_schedules(schedule_req)
         common_times = _calculate_common_times(schedule_req, schedule_info)
         return AvailabilityResponse(common_availability=common_times)
 
     except Exception as e:
         logger.error(f"空き時間取得ユースケースに失敗しました: {e}")
-        raise
-
-def get_schedules(schedule_req: ScheduleRequest) -> Dict[str, Any]:
-    """スケジュールを取得する"""
-    try:
-        graph_client = GraphAPIClient()
-        target_user_email = schedule_req.users[0].email
-        user_emails = [user.email for user in schedule_req.users]
-        
-        return graph_client.get_schedules(
-            target_user_email=target_user_email,
-            schedules=user_emails,
-            start_date=schedule_req.start_date,
-            end_date=schedule_req.end_date,
-            start_time=schedule_req.start_time,
-            end_time=schedule_req.end_time,
-            time_zone=schedule_req.time_zone,
-            interval_minutes=schedule_req.duration_minutes
-        )
-    except Exception as e:
-        logger.error(f"スケジュール取得に失敗: {e}")
         raise
 
 def parse_availability(schedule_data: Dict[str, Any], start_hour: float, end_hour: float) -> List[List[Tuple[float, float]]]:

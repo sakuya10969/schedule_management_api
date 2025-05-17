@@ -10,6 +10,7 @@ from app.utils.time import (
     find_common_availability_in_date_range,
     format_availability_result
 )
+from app.usecases.schedule.availability_usecase import parse_availability
 
 logger = logging.getLogger(__name__)
 
@@ -46,28 +47,21 @@ def _get_available_slots(schedule_request: ScheduleRequest) -> List[List[str]]:
     """空き時間スロットを取得して整形"""
     try:
         graph_api_client = GraphAPIClient()
-        schedule_info = graph_api_client.get_schedules(
-            target_user_email=schedule_request.users[0].email,
-            schedules=[user.email for user in schedule_request.users],
-            start_date=schedule_request.start_date,
-            end_date=schedule_request.end_date,
-            start_time=schedule_request.start_time,
-            end_time=schedule_request.end_time,
-            time_zone=schedule_request.time_zone,
-            interval_minutes=schedule_request.duration_minutes
-        )
+        schedule_info = graph_api_client.get_schedules(schedule_request)
 
         start_hour = time_string_to_float(schedule_request.start_time)
         end_hour = time_string_to_float(schedule_request.end_time)
         
         # 新しい日付範囲対応の関数を使用
         available_slots = find_common_availability_in_date_range(
-            free_slots_list=schedule_info,
+            free_slots_list=parse_availability(schedule_info, start_hour, end_hour),
             duration_minutes=schedule_request.duration_minutes,
             start_date=schedule_request.start_date,
             end_date=schedule_request.end_date,
             start_hour=start_hour,
-            end_hour=end_hour
+            end_hour=end_hour,
+            required_participants=schedule_request.required_participants,
+            users=schedule_request.users
         )
 
         return format_availability_result(available_slots)
