@@ -1,17 +1,9 @@
 import logging
 from fastapi import HTTPException
-from typing import List
 
-from app.schemas import ScheduleRequest, FormData
+from app.schemas import FormData
 from app.infrastructure.az_cosmos import AzCosmosDBClient
-from app.infrastructure.graph_api import GraphAPIClient
-from app.utils.time import (
-    split_candidates,
-    time_string_to_float,
-    find_common_availability_in_date_range,
-    format_availability_result
-)
-from app.usecases.schedule.availability_usecase import parse_availability
+from app.utils.time import split_candidates
 
 logger = logging.getLogger(__name__)
 

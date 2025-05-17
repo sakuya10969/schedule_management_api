@@ -11,7 +11,6 @@ from app.config.config import get_config
 logger = logging.getLogger(__name__)
 
 config = get_config()
-
 class AzCosmosDBClient:
     def __init__(self):
         """Cosmos DB クライアント初期化"""

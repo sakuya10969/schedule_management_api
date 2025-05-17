@@ -19,7 +19,6 @@ async def get_availability(schedule_req: ScheduleRequest):
         logger.error(f"空き時間取得に失敗: {e}")
         raise HTTPException(status_code=500, detail="空き時間取得エラー")
 
-
 @router.post("/appointment", response_model=AppointmentResponse)
 async def create_appointment(
     background_tasks: BackgroundTasks, appointment_req: AppointmentRequest = Body(...)
@@ -30,7 +29,6 @@ async def create_appointment(
     except Exception as e:
         logger.error(f"予定作成エラー: {e}")
         raise HTTPException(status_code=500, detail="予定作成エラー")
-
 
 @router.get("/reschedule")
 async def reschedule(
