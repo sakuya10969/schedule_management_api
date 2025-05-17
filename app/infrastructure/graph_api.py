@@ -1,9 +1,10 @@
 import requests
 import urllib.parse
 from fastapi import HTTPException
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 from app.utils.access_token import get_access_token
+from app.schemas.form import ScheduleRequest
 
 class GraphAPIClient:
     def __init__(self):
@@ -35,25 +36,23 @@ class GraphAPIClient:
         except requests.RequestException as e:
             raise HTTPException(status_code=500, detail=f"Graph APIリクエストエラー: {e}")
 
-    def get_schedules(self, target_user_email: str, schedules: List[str], start_date: str, end_date: str, 
-                     start_time: str, end_time: str, time_zone: str = "Tokyo Standard Time", 
-                     interval_minutes: int = 30) -> Dict[str, Any]:
+    def get_schedules(self, schedule_req: ScheduleRequest) -> Dict[str, Any]:
         """スケジュールを取得するためのGraph API呼び出し"""
-        encoded_email = urllib.parse.quote(target_user_email)
-        url = f"https://graph.microsoft.com/v1.0/users/{encoded_email}/calendar/getSchedule"
+        target_user_email = urllib.parse.quote(schedule_req.users[0].email)
+        url = f"https://graph.microsoft.com/v1.0/users/{target_user_email}/calendar/getSchedule"
         
         # リクエストボディの構築
         request_body = {
-            "schedules": schedules,
+            "schedules": [user.email for user in schedule_req.users],
             "startTime": {
-                "dateTime": f"{start_date}T{start_time}:00",
-                "timeZone": time_zone
+                "dateTime": f"{schedule_req.start_date}T{schedule_req.start_time}:00",
+                "timeZone": schedule_req.time_zone
             },
             "endTime": {
-                "dateTime": f"{end_date}T{end_time}:00",
-                "timeZone": time_zone
+                "dateTime": f"{schedule_req.end_date}T{schedule_req.end_time}:00",
+                "timeZone": schedule_req.time_zone
             },
-            "availabilityViewInterval": interval_minutes
+            "availabilityViewInterval": schedule_req.duration_minutes
         }
 
         response = self.post_request(url, request_body)
