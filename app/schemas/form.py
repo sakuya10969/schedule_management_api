@@ -1,15 +1,13 @@
 from pydantic import BaseModel, Field
 from typing import List
 
-
 class User(BaseModel):
     """ユーザー情報を表すスキーマ"""
-
     email: str = Field(..., description="ユーザーのメールアドレス")
 
     class Config:
+        frozen = True
         json_schema_extra = {"example": {"email": "crawler01@intelligentforce.co.jp"}}
-
 
 class ScheduleRequest(BaseModel):
     """スケジュールリクエストを表すスキーマ"""
@@ -40,7 +38,6 @@ class ScheduleRequest(BaseModel):
                 "time_zone": "Tokyo Standard Time",
             }
         }
-
 
 class FormData(BaseModel):
     """フォームデータを表すスキーマ"""

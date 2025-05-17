@@ -135,8 +135,8 @@ def find_common_availability_in_date_range(
     end_date: str,
     start_hour: float,
     end_hour: float,
-    required_participants: int = None,
-    users: List[Union[str, object]] = None
+    required_participants: int,
+    users: List[Union[str, object]]
 ) -> Dict[str, Union[List[str], List[Tuple[str, List[str]]]]]:
     """日付範囲内の共通空き時間を探す"""
     if not free_slots_list:

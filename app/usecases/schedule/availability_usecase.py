@@ -62,7 +62,9 @@ def _get_available_slots(schedule_req: ScheduleRequest, free_slots_list: List[Li
             start_date=schedule_req.start_date,
             end_date=schedule_req.end_date,
             start_hour=start_hour,
-            end_hour=end_hour
+            end_hour=end_hour,
+            required_participants=schedule_req.required_participants,
+            users=schedule_req.users
         )
     else:
         # 一部参加の場合

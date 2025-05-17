@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List
 
-
 class AppointmentRequest(BaseModel):
     """面接予約リクエストを表すスキーマ"""
 
@@ -31,8 +30,6 @@ class AppointmentRequest(BaseModel):
                 "token": "sample-token-123",
             }
         }
-
-
 class AppointmentResponse(BaseModel):
     """面接予約レスポンスを表すスキーマ"""
 
@@ -53,7 +50,6 @@ class AppointmentResponse(BaseModel):
                 ],
             }
         }
-
 
 class AvailabilityResponse(BaseModel):
     """空き時間候補のレスポンスを表すスキーマ"""
