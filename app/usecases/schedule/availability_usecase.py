@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 async def get_availability_usecase(schedule_req: ScheduleRequest) -> AvailabilityResponse:
     """ユーザーの空き時間を計算して返すユースケース"""
     try:
-        graph_client = GraphAPIClient()
-        schedule_info = graph_client.get_schedules(schedule_req)
+        graph_api_client = GraphAPIClient()
+        schedule_info = graph_api_client.get_schedules(schedule_req)
         common_times = _calculate_common_times(schedule_req, schedule_info)
         return AvailabilityResponse(common_availability=common_times)
 

@@ -92,7 +92,7 @@ def _create_and_register_events(appointment_req: AppointmentRequest) -> List[Dic
 
 def send_confirmation_emails(appointment_req: AppointmentRequest, meeting_urls: List[str]) -> None:
     """内部向けおよび先方向けの確認メール送信処理をまとめる。"""
-    graph_client = GraphAPIClient()
+    graph_api_client = GraphAPIClient()
     meeting_url = meeting_urls[0] if isinstance(meeting_urls, list) else meeting_urls
     
     # 内部関係者向けメール送信
@@ -106,7 +106,7 @@ def send_confirmation_emails(appointment_req: AppointmentRequest, meeting_urls: 
         f'・会議URL<br><a href="{meeting_url}">{meeting_url}</a><br><br>'
     )
     for to_email in appointment_req.users:
-        graph_client.send_email(
+        graph_api_client.send_email(
             config['SYSTEM_SENDER_EMAIL'], 
             to_email, 
             subject, 
@@ -131,7 +131,7 @@ def send_confirmation_emails(appointment_req: AppointmentRequest, meeting_urls: 
         "以上になります。<br>"
         "当日はどうぞよろしくお願いいたします。"
     )
-    graph_client.send_email(
+    graph_api_client.send_email(
         config['SYSTEM_SENDER_EMAIL'],
         appointment_req.email,
         subject,
@@ -140,7 +140,7 @@ def send_confirmation_emails(appointment_req: AppointmentRequest, meeting_urls: 
 
 def send_no_available_schedule_emails(appointment_req: AppointmentRequest) -> None:
     """可能な日程がない場合のメールを担当者に送信する"""
-    graph_client = GraphAPIClient()
+    graph_api_client = GraphAPIClient()
     subject = f"【{appointment_req.company}/{appointment_req.lastname}{appointment_req.firstname}様】日程確定"
     body = (
         f"{appointment_req.lastname}様<br><br>"
@@ -154,7 +154,7 @@ def send_no_available_schedule_emails(appointment_req: AppointmentRequest) -> No
     )
 
     for to_email in appointment_req.users:
-        graph_client.send_email(
+        graph_api_client.send_email(
             config['SYSTEM_SENDER_EMAIL'],
             to_email,
             subject,
