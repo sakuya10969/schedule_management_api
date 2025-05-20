@@ -1,3 +1,4 @@
+
 from datetime import datetime, timedelta
 from typing import List, Tuple, Union, Dict
 import logging
@@ -39,49 +40,53 @@ def slot_to_time(start_date: str, slots: List[str]) -> List[Tuple[datetime, date
     """スロットのリストをdatetimeタプルのリストに変換"""
     return [parse_slot(start_date, slot) for slot in slots]
 
-def find_continuous_slots(slots: List[Tuple[float, float]], required_slots: int) -> List[str]:
-    """連続する時間枠を見つける"""
-    if not slots or required_slots <= 0:
+def find_continuous_slots(slots: List[Tuple[float, float]], duration: float) -> List[str]:
+    """指定された duration (時間単位) に満たす連続スロットを見つける（展開版）"""
+    if not slots or duration <= 0:
         return []
 
     sorted_slots = sorted(slots, key=lambda x: x[0])
-    continuous_groups = []
-    current_group = [sorted_slots[0]]
-
-    for i in range(1, len(sorted_slots)):
-        if abs(current_group[-1][1] - sorted_slots[i][0]) < 1e-2:
-            current_group.append(sorted_slots[i])
-        else:
-            if len(current_group) >= required_slots:
-                continuous_groups.append(current_group)
-            current_group = [sorted_slots[i]]
-
-    if len(current_group) >= required_slots:
-        continuous_groups.append(current_group)
-
     result = []
-    for group in continuous_groups:
-        for i in range(len(group) - required_slots + 1):
-            start = group[i][0]
-            end = group[i + required_slots - 1][1]
-            result.append(f"{start} - {end}")
+
+    start = None
+    end = None
+
+    for slot in sorted_slots:
+        if start is None:
+            start, end = slot
+        elif abs(end - slot[0]) < 1e-2:
+            end = slot[1]
+        else:
+            result.extend(generate_subslots(start, end, duration))
+            start, end = slot
+
+    if start is not None:
+        result.extend(generate_subslots(start, end, duration))
 
     return sorted(result, key=lambda x: float(x.split(" - ")[0]))
+
+def generate_subslots(start: float, end: float, duration: float) -> List[str]:
+    result = []
+    current = start
+    while current + duration <= end + 1e-6:
+        result.append(f"{round(current, 2)} - {round(current + duration, 2)}")
+        current += duration
+    return result
 
 def find_common_slots(
     free_slots_list: List[List[Tuple[float, float]]],
     users: List[Union[str, object]],
     required_participants: int,
-    required_slots: int,
+    duration_minutes: int,
     start_hour: float = 0.0,
     end_hour: float = 24.0
 ) -> List[Tuple[str, List[str]]]:
-    """必要な参加者数を満たす連続スロットを見つける"""
     if not free_slots_list or required_participants <= 0:
         return []
 
-    # スロットのフィルタリングと参加者の収集
-    slot_users = {}
+    slot_users: Dict[Tuple[float, float], List[str]] = {}
+    duration_hours = duration_minutes / 60.0
+
     for i, user_slots in enumerate(free_slots_list):
         user = users[i] if i < len(users) else f"User-{i}"
         filtered_slots = [
@@ -91,42 +96,23 @@ def find_common_slots(
         for slot in filtered_slots:
             slot_users.setdefault(slot, []).append(user)
 
-    # 必要人数を満たすスロットを抽出
-    available_slots = [
-        (slot, users) for slot, users in slot_users.items()
-        if len(users) >= required_participants
-    ]
-    available_slots.sort(key=lambda x: x[0][0])
+    available_slots = [slot for slot, user_list in slot_users.items() if len(user_list) >= required_participants]
+    available_slots.sort(key=lambda x: x[0])
 
-    if not available_slots:
-        return []
+    continuous_ranges = find_continuous_slots(available_slots, duration_hours)
 
-    # 連続スロットの検出と結果の生成
-    result = []
-    current_window = []
-    current_users = set()
+    result = [(r, []) for r in continuous_ranges]
+    for idx, (range_str, _) in enumerate(result):
+        start, end = map(float, range_str.split(" - "))
+        participants = set(users)
+        for i, user_slots in enumerate(free_slots_list):
+            user = users[i] if i < len(users) else f"User-{i}"
+            covered = any(s <= start and e >= end for s, e in user_slots)
+            if not covered:
+                participants.discard(user)
+        result[idx] = (range_str, list(participants))
 
-    for slot, users in available_slots:
-        if not current_window or abs(current_window[-1][0][1] - slot[0]) < 1e-2:
-            current_window.append((slot, users))
-            if len(current_window) == 1:
-                current_users = set(users)
-            else:
-                current_users &= set(users)
-        else:
-            if len(current_window) >= required_slots and len(current_users) >= required_participants:
-                start_slot = current_window[0][0]
-                end_slot = current_window[-1][0]
-                result.append((f"{start_slot[0]} - {end_slot[1]}", list(current_users)))
-            current_window = [(slot, users)]
-            current_users = set(users)
-
-    if len(current_window) >= required_slots and len(current_users) >= required_participants:
-        start_slot = current_window[0][0]
-        end_slot = current_window[-1][0]
-        result.append((f"{start_slot[0]} - {end_slot[1]}", list(current_users)))
-
-    return result
+    return [r for r in result if len(r[1]) >= required_participants]
 
 def find_common_availability_in_date_range(
     free_slots_list: List[List[Tuple[float, float]]], 
@@ -138,44 +124,28 @@ def find_common_availability_in_date_range(
     required_participants: int,
     users: List[Union[str, object]]
 ) -> Dict[str, Union[List[str], List[Tuple[str, List[str]]]]]:
-    """日付範囲内の共通空き時間を探す"""
     if not free_slots_list:
         return {}
 
-    required_slots = (duration_minutes + 29) // 30
     start_dt = datetime.strptime(start_date, "%Y-%m-%d")
     end_dt = datetime.strptime(end_date, "%Y-%m-%d")
     result = {}
 
     while start_dt <= end_dt:
         current_date = start_dt.strftime("%Y-%m-%d")
-        
-        if required_participants and users:
-            slots = find_common_slots(
-                free_slots_list,
-                users,
-                required_participants,
-                required_slots,
-                start_hour,
-                end_hour
-            )
-        else:
-            filtered_slots = []
-            for user_slots in free_slots_list:
-                filtered_user_slots = [
-                    slot for slot in user_slots
-                    if start_hour <= slot[0] and slot[1] <= end_hour
-                ]
-                filtered_slots.append(set(filtered_user_slots))
-            
-            if filtered_slots:
-                common_slots = set.intersection(*filtered_slots)
-                slots = find_continuous_slots(list(common_slots), required_slots)
-            else:
-                slots = []
+
+        slots = find_common_slots(
+            free_slots_list,
+            users,
+            required_participants,
+            duration_minutes,
+            start_hour,
+            end_hour
+        )
 
         if slots:
             result[current_date] = slots
+
         start_dt += timedelta(days=1)
 
     return result
