@@ -1,7 +1,7 @@
 import requests
 import urllib.parse
 from fastapi import HTTPException
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from app.utils.access_token import get_access_token
 from app.schemas.form import ScheduleRequest
@@ -36,32 +36,33 @@ class GraphAPIClient:
         except requests.RequestException as e:
             raise HTTPException(status_code=500, detail=f"Graph APIリクエストエラー: {e}")
 
-    def get_schedules(self, schedule_req: ScheduleRequest) -> Dict[str, Any]:
-        """スケジュールを取得するためのGraph API呼び出し"""
-        target_user_email = urllib.parse.quote(schedule_req.users[0].email)
-        url = f"https://graph.microsoft.com/v1.0/users/{target_user_email}/calendar/getSchedule"
-        
-        # リクエストボディの構築
-        request_body = {
-            "schedules": [user.email for user in schedule_req.users],
-            "startTime": {
-                "dateTime": f"{schedule_req.start_date}T{schedule_req.start_time}:00",
-                "timeZone": schedule_req.time_zone
-            },
-            "endTime": {
-                "dateTime": f"{schedule_req.end_date}T{schedule_req.end_time}:00",
-                "timeZone": schedule_req.time_zone
-            },
-            "availabilityViewInterval": schedule_req.duration_minutes
-        }
+    def get_schedules(self, schedule_req: ScheduleRequest) -> List[Dict[str, Any]]:
+        """スケジュールを取得するためのGraph API呼び出し(複数ユーザー対応)"""
+        schedules_list = []
 
-        response = self.post_request(url, request_body)
-        
-        if not response or 'value' not in response:
-            error_msg = f"無効なレスポンス形式: {response}"
-            raise ValueError(error_msg)
+        for user in schedule_req.users:
+            target_user_email = urllib.parse.quote(user.email)
+            url = f"https://graph.microsoft.com/v1.0/users/{target_user_email}/calendar/getSchedule"
+            
+            # リクエストボディの構築
+            request_body = {
+                "schedules": [user.email],
+                "startTime": {
+                    "dateTime": f"{schedule_req.start_date}T{schedule_req.start_time}:00",
+                    "timeZone": schedule_req.time_zone
+                },
+                "endTime": {
+                    "dateTime": f"{schedule_req.end_date}T{schedule_req.end_time}:00",
+                    "timeZone": schedule_req.time_zone
+                },
+                "availabilityViewInterval": schedule_req.duration_minutes
+            }
 
-        return response
+            # APIリクエストを実行し、結果をリストに追加
+            response = self.post_request(url, request_body)
+            schedules_list.append(response)
+
+        return schedules_list
 
     def register_event(self, user_email: str, event: Dict[str, Any]) -> Dict[str, Any]:
         """予定を登録するためのGraph API呼び出し"""
