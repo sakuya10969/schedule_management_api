@@ -25,7 +25,6 @@ async def get_availability_usecase(schedule_req: ScheduleRequest) -> Availabilit
         logger.exception("空き時間取得ユースケースに失敗しました")
         raise
 
-
 def parse_availability(schedule_data_list: List[Dict[str, Any]], start_hour: float, end_hour: float, slot_duration: float) -> List[List[Tuple[float, float]]]:
     """空き時間をパースする"""
     result = []
@@ -49,7 +48,6 @@ def parse_availability(schedule_data_list: List[Dict[str, Any]], start_hour: flo
 
     return result
 
-
 def _calculate_common_times(schedule_req: ScheduleRequest, schedule_info_list: List[Dict[str, Any]]) -> List[List[str]]:
     """共通の空き時間を計算"""
     start_hour = time_string_to_float(schedule_req.start_time)
@@ -64,7 +62,6 @@ def _calculate_common_times(schedule_req: ScheduleRequest, schedule_info_list: L
         all_free_slots.extend(free_slots)
 
     return _get_available_slots(schedule_req, all_free_slots)
-
 
 def _get_available_slots(schedule_req: ScheduleRequest, free_slots_list: List[List[Tuple[float, float]]]) -> List[List[str]]:
     """必要人数に応じた空き時間を取得"""
