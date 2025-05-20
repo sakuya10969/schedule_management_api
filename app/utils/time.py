@@ -41,7 +41,7 @@ def slot_to_time(start_date: str, slots: List[str]) -> List[Tuple[datetime, date
     return [parse_slot(start_date, slot) for slot in slots]
 
 def find_continuous_slots(slots: List[Tuple[float, float]], duration: float) -> List[str]:
-    """指定された duration (時間単位) に満たす連続スロットを見つける（展開版）"""
+    """指定されたdurationに満たす連続スロットを見つける"""
     if not slots or duration <= 0:
         return []
 
