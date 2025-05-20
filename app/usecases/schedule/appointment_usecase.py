@@ -9,6 +9,7 @@ from app.utils.formatting import parse_candidate, format_candidate_date
 from app.config.config import get_config
 
 logger = logging.getLogger(__name__)
+
 config = get_config()
 
 async def create_appointment_usecase(
