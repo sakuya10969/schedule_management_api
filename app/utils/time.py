@@ -1,4 +1,3 @@
-
 from datetime import datetime, timedelta
 from typing import List, Tuple, Union, Dict
 import logging
@@ -191,18 +190,13 @@ def format_slot_to_datetime_str(date_str: str, slot_str: str) -> Tuple[str, str]
     例: ('2023-10-01', '13.5 - 14.5') -> ('2023-10-01T13:30:00', '2023-10-01T14:30:00')
     """
     start_hour, end_hour = parse_slot_str(slot_str)
-    
-    # 時間と分を計算
-    start_hour_int = int(start_hour)
-    start_minute = int((start_hour % 1) * 60)
-    end_hour_int = int(end_hour)
-    end_minute = int((end_hour % 1) * 60)
-    
-    # ISO形式のdatetime文字列を生成
-    start_dt = f"{date_str}T{start_hour_int:02d}:{start_minute:02d}:00"
-    end_dt = f"{date_str}T{end_hour_int:02d}:{end_minute:02d}:00"
-    
-    return start_dt, end_dt
+    # 日付をdatetimeオブジェクトに変換
+    base_date = datetime.strptime(date_str, "%Y-%m-%d")
+    # 開始時刻と終了時刻を計算
+    start_dt = base_date + timedelta(hours=start_hour)
+    end_dt = base_date + timedelta(hours=end_hour)
+
+    return start_dt.isoformat(), end_dt.isoformat()
 
 def format_availability_result(
     available_slots: Dict[str, Union[List[str], List[Tuple[str, List[str]]]]]
