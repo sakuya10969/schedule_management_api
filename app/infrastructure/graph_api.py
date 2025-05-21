@@ -7,10 +7,12 @@ from app.utils.access_token import get_access_token
 from app.schemas.form import ScheduleRequest
 
 class GraphAPIClient:
+    BASE_URL = "https://graph.microsoft.com/v1.0/users"
+
     def __init__(self):
         self.refresh_token()
 
-    def refresh_token(self):
+    def refresh_token(self) -> None:
         """アクセストークンを取得またはリフレッシュ"""
         try:
             self.access_token = get_access_token()
@@ -23,14 +25,14 @@ class GraphAPIClient:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"トークン更新失敗: {str(e)}")
 
-    def post_request(self, url: str, body: Dict[str, Any], timeout: int = 60) -> Optional[Dict[str, Any]]:
-        """Graph APIへのPOSTリクエスト"""
+    def _handle_request(self, method: str, url: str, **kwargs) -> Optional[Dict[str, Any]]:
+        """APIリクエストの共通処理"""
         try:
-            response = requests.post(url, headers=self.headers, json=body, timeout=timeout)
+            response = requests.request(method, url, headers=self.headers, **kwargs)
             
             if response.status_code == 401:
                 self.refresh_token()
-                response = requests.post(url, headers=self.headers, json=body, timeout=timeout)
+                response = requests.request(method, url, headers=self.headers, **kwargs)
             
             response.raise_for_status()
             
@@ -41,12 +43,16 @@ class GraphAPIClient:
         except ValueError as e:
             raise HTTPException(status_code=502, detail=f"Graph APIのレスポンスが不正: {str(e)}")
 
+    def post_request(self, url: str, body: Dict[str, Any], timeout: int = 60) -> Optional[Dict[str, Any]]:
+        """Graph APIへのPOSTリクエスト"""
+        return self._handle_request("POST", url, json=body, timeout=timeout)
+
     def get_schedules(self, schedule_req: ScheduleRequest) -> List[Dict[str, Any]]:
         """スケジュールを取得"""
         try:
             schedules_list = []
             for user in schedule_req.users:
-                url = f"https://graph.microsoft.com/v1.0/users/{urllib.parse.quote(user.email)}/calendar/getSchedule"
+                url = f"{self.BASE_URL}/{urllib.parse.quote(user.email)}/calendar/getSchedule"
                 body = {
                     "schedules": [user.email],
                     "startTime": {
@@ -68,7 +74,7 @@ class GraphAPIClient:
     def register_event(self, user_email: str, event: Dict[str, Any]) -> Dict[str, Any]:
         """予定を登録"""
         try:
-            url = f"https://graph.microsoft.com/v1.0/users/{urllib.parse.quote(user_email)}/calendar/events"
+            url = f"{self.BASE_URL}/{urllib.parse.quote(user_email)}/calendar/events"
             return self.post_request(url, event)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"予定登録エラー: {str(e)}")
@@ -76,7 +82,7 @@ class GraphAPIClient:
     def send_email(self, sender_email: str, to_email: str, subject: str, body: str) -> None:
         """メールを送信"""
         try:
-            endpoint = f"https://graph.microsoft.com/v1.0/users/{sender_email}/sendMail"
+            endpoint = f"{self.BASE_URL}/{sender_email}/sendMail"
             email_data = {
                 "message": {
                     "subject": subject,
@@ -90,3 +96,11 @@ class GraphAPIClient:
             self.post_request(endpoint, email_data)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"メール送信エラー: {str(e)}")
+
+    def delete_event(self, user_email: str, event_id: str) -> None:
+        """予定を削除するためのGraph API呼び出し"""
+        try:
+            url = f"{self.BASE_URL}/{urllib.parse.quote(user_email)}/events/{event_id}"
+            self._handle_request("DELETE", url)
+        except requests.RequestException as e:
+            raise HTTPException(status_code=500, detail=f"Graph APIイベント削除エラー: {e}")
