@@ -2,6 +2,7 @@ import requests
 import urllib.parse
 from fastapi import HTTPException
 from typing import Dict, Any, List, Optional
+from datetime import datetime, timedelta
 
 from app.utils.access_token import get_access_token
 from app.schemas.form import ScheduleRequest
@@ -51,23 +52,29 @@ class GraphAPIClient:
         """スケジュールを取得"""
         try:
             schedules_list = []
-            for user in schedule_req.users:
-                url = f"{self.BASE_URL}/{urllib.parse.quote(user.email)}/calendar/getSchedule"
-                body = {
-                    "schedules": [user.email],
-                    "startTime": {
-                        "dateTime": f"{schedule_req.start_date}T{schedule_req.start_time}:00",
-                        "timeZone": schedule_req.time_zone
-                    },
-                    "endTime": {
-                        "dateTime": f"{schedule_req.end_date}T{schedule_req.end_time}:00",
-                        "timeZone": schedule_req.time_zone
-                    },
-                    "availabilityViewInterval": schedule_req.duration_minutes
-                }
-                schedules_list.append(self.post_request(url, body))
+            start = datetime.strptime(schedule_req.start_date, "%Y-%m-%d")
+            end = datetime.strptime(schedule_req.end_date, "%Y-%m-%d")
+
+            delta = timedelta(days=1)
+            while start <= end:
+                for user in schedule_req.users:
+                    url = f"{self.BASE_URL}/{urllib.parse.quote(user.email)}/calendar/getSchedule"
+                    body = {
+                        "schedules": [user.email],
+                        "startTime": {
+                            "dateTime": f"{start.date()}T{schedule_req.start_time}:00",
+                            "timeZone": schedule_req.time_zone
+                        },
+                        "endTime": {
+                            "dateTime": f"{start.date()}T{schedule_req.end_time}:00",
+                            "timeZone": schedule_req.time_zone
+                        },
+                        "availabilityViewInterval": schedule_req.duration_minutes
+                    }
+                    schedules_list.append(self.post_request(url, body))
+                start += delta
+
             return schedules_list
-            
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"スケジュール取得エラー: {str(e)}")
 
