@@ -1,13 +1,14 @@
 import logging
 from typing import Dict, List, Any, Tuple
+from collections import defaultdict
+from datetime import datetime
 
 from app.schemas import ScheduleRequest, AvailabilityResponse
 from app.infrastructure.graph_api import GraphAPIClient
 from app.utils.time import (
     time_string_to_float,
-    find_common_availability_in_date_range,
-    find_common_availability_participants_in_date_range,
-    format_availability_result
+    find_common_slots,
+    format_slot_to_datetime_str
 )
 
 logger = logging.getLogger(__name__)
@@ -17,85 +18,76 @@ async def get_availability_usecase(schedule_req: ScheduleRequest) -> Availabilit
     logger.info(f"空き時間取得開始: {schedule_req}")
     try:
         graph_api_client = GraphAPIClient()        
-        schedule_info = graph_api_client.get_schedules(schedule_req)
-        logger.debug(f"スケジュール情報取得完了: {len(schedule_info)}件")
-        
-        common_times = _calculate_common_times(schedule_req, schedule_info)
+        schedule_info_list = graph_api_client.get_schedules(schedule_req)
+        logger.debug(f"スケジュール情報取得完了: {len(schedule_info_list)}件")
+        logger.info(f"スケジュール情報: {schedule_info_list}")
+        common_times = _calculate_common_times(schedule_req, schedule_info_list)
         logger.info(f"共通の空き時間計算完了: {len(common_times)}件の候補時間を特定")
-
         return AvailabilityResponse(common_availability=common_times)
-
     except Exception as e:
         logger.exception("空き時間取得ユースケースに失敗しました")
         raise
 
-def parse_availability(schedule_data_list: List[Dict[str, Any]], start_hour: float, end_hour: float, slot_duration: float) -> List[List[Tuple[float, float]]]:
-    """空き時間をパースする"""
-    logger.debug(f"空き時間パース開始: データ数={len(schedule_data_list)}, 開始時刻={start_hour}, 終了時刻={end_hour}, スロット間隔={slot_duration}")
-    result = []
-
-    for day_idx, schedule_data in enumerate(schedule_data_list):
-        schedules_info = schedule_data.get("value", [])
-        logger.debug(f"日付インデックス{day_idx}のスケジュール情報処理中: {len(schedules_info)}件")
-
-        for sched_idx, schedule in enumerate(schedules_info):
-            availability_view = schedule.get("availabilityView", "")
-            logger.debug(f"スケジュール{sched_idx}の可用性ビュー長: {len(availability_view)}")
-
-            free_slots = []
-            for i, status in enumerate(availability_view):
-                slot_start = start_hour + i * slot_duration
-                slot_end = slot_start + slot_duration
-                if slot_end > end_hour:
-                    continue
-                if status == "0":
-                    free_slots.append((slot_start, slot_end))
-            
-            logger.debug(f"空きスロット検出: {len(free_slots)}件")
-            result.append(free_slots)
-
-    logger.info(f"空き時間パース完了: 合計{len(result)}件の空きスロットリスト")
+def parse_availability(schedule_data: Dict[str, Any], start_hour: float, end_hour: float, slot_duration: float) -> List[Tuple[float, float]]:
+    """1ユーザー・1日分の空き時間をパースする"""
+    schedules_info = schedule_data.get("value", [])
+    result: List[Tuple[float, float]] = []
+    for schedule in schedules_info:
+        availability_view = schedule.get("availabilityView", "")
+        for i, status in enumerate(availability_view):
+            slot_start = start_hour + i * slot_duration
+            slot_end = slot_start + slot_duration
+            if slot_end > end_hour:
+                continue
+            if status == "0":
+                result.append((slot_start, slot_end))
     return result
 
 def _calculate_common_times(schedule_req: ScheduleRequest, schedule_info_list: List[Dict[str, Any]]) -> List[List[str]]:
-    """共通の空き時間を計算"""
     start_hour = time_string_to_float(schedule_req.start_time)
     end_hour = time_string_to_float(schedule_req.end_time)
     slot_duration = schedule_req.duration_minutes / 60.0
-    logger.debug(f"計算パラメータ: 開始={start_hour}, 終了={end_hour}, 間隔={slot_duration}")
 
-    all_free_slots = []
+    date_user_slots = defaultdict(list)
+    user_count = len(schedule_req.users)
+    date_list = []
 
-    for i, schedule_info in enumerate(schedule_info_list):
-        user_email = getattr(schedule_req.users[i], 'email', f'user_{i}')
-        logger.debug(f"ユーザー {user_email} の空き時間を処理中")
-        free_slots = parse_availability([schedule_info], start_hour, end_hour, slot_duration)
-        logger.debug(f"ユーザー {user_email} の空きスロット数: {len(free_slots)}")
-        all_free_slots.extend(free_slots)
+    # 追加: 日付範囲の比較用
+    start_date_dt = datetime.strptime(schedule_req.start_date, "%Y-%m-%d")
+    end_date_dt = datetime.strptime(schedule_req.end_date, "%Y-%m-%d")
 
-    logger.info(f"全ユーザーの空きスロット合計: {len(all_free_slots)}件")
-    return _get_available_slots(schedule_req, all_free_slots)
+    for idx, schedule_info in enumerate(schedule_info_list):
+        user_idx = idx % user_count
+        free_slots = parse_availability(schedule_info, start_hour, end_hour, slot_duration)
+        date = None
+        for v in schedule_info.get("value", []):
+            for item in v.get("scheduleItems", []):
+                date = item["start"]["dateTime"][:10]
+                break
+            if date:
+                break
+        # ここで日付範囲チェック
+        if date:
+            date_dt = datetime.strptime(date, "%Y-%m-%d")
+            if start_date_dt <= date_dt <= end_date_dt:
+                date_user_slots[date].append(free_slots)
+                if date not in date_list:
+                    date_list.append(date)
 
-def _get_available_slots(schedule_req: ScheduleRequest, free_slots_list: List[List[Tuple[float, float]]]) -> List[List[str]]:
-    """必要人数に応じた空き時間を取得"""
-    logger.info(f"利用可能なスロットの計算開始: 必要参加者数={schedule_req.required_participants}")
-
-    start_hour = time_string_to_float(schedule_req.start_time)
-    end_hour = time_string_to_float(schedule_req.end_time)
-
-    logger.debug("全員参加必須モードで計算実行")
-    available_slots = find_common_availability_in_date_range(
-        free_slots_list=free_slots_list,
-        duration_minutes=schedule_req.duration_minutes,
-        start_date=schedule_req.start_date,
-        end_date=schedule_req.end_date,
-        start_hour=start_hour,
-        end_hour=end_hour,
-        required_participants=schedule_req.required_participants,
-        users=schedule_req.users
-    )
-
-    logger.debug(f"利用可能なスロット数: {len(available_slots)}")
-    formatted_result = format_availability_result(available_slots)
-    logger.info(f"最終的な候補時間数: {len(formatted_result)}")
-    return formatted_result
+    result = []
+    for date in date_list:
+        user_slots_list = date_user_slots[date]
+        if not user_slots_list or len(user_slots_list) < schedule_req.required_participants:
+            continue
+        common_slots = find_common_slots(
+            user_slots_list,
+            schedule_req.users,
+            schedule_req.required_participants,
+            schedule_req.duration_minutes,
+            start_hour,
+            end_hour
+        )
+        for slot, _ in common_slots:
+            start_dt, end_dt = format_slot_to_datetime_str(date, slot)
+            result.append([start_dt, end_dt])
+    return result
