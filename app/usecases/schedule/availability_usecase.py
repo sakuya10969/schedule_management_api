@@ -17,7 +17,7 @@ async def get_availability_usecase(schedule_req: ScheduleRequest) -> Availabilit
     """ユーザーの空き時間を計算して返すユースケース"""
     logger.info(f"空き時間取得開始: {schedule_req}")
     try:
-        graph_api_client = GraphAPIClient()        
+        graph_api_client = GraphAPIClient()
         schedule_info_list = graph_api_client.get_schedules(schedule_req)
         logger.debug(f"スケジュール情報取得完了: {len(schedule_info_list)}件")
         logger.info(f"スケジュール情報: {schedule_info_list}")
