@@ -221,14 +221,34 @@ def aggregate_user_availability(
     start_date_dt = datetime.strptime(start_date, "%Y-%m-%d")
     end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
 
-    for _, schedule_info in enumerate(schedule_info_list):
-        free_slots = parse_availability(schedule_info, start_hour, end_hour, slot_duration)
+    for schedule_info in schedule_info_list:
+        for v in schedule_info.get("value", []):
+            availability_view = v.get("availabilityView", "")
+            if not availability_view:
+                continue
 
-        # availabilityView は start_date に対応している前提で進める
-        date = start_date
-        date_dt = datetime.strptime(date, "%Y-%m-%d")
+            # 予定がある日の最初のscheduleItemから日付を特定（正確にはリクエスト時の順番に依存）
+            # より正確にしたい場合は Graph API のレスポンス順を信用する必要あり
+            for item in v.get("scheduleItems", []):
+                date = item["start"]["dateTime"][:10]
+                break
+            else:
+                # scheduleItemsが空でも、availabilityViewがあるならstart_dateを仮採用
+                date = start_date
 
-        if start_date_dt <= date_dt <= end_date_dt:
+            date_dt = datetime.strptime(date, "%Y-%m-%d")
+            if not (start_date_dt <= date_dt <= end_date_dt):
+                continue
+
+            free_slots = []
+            for i, status in enumerate(availability_view):
+                slot_start = start_hour + i * slot_duration
+                slot_end = slot_start + slot_duration
+                if slot_end > end_hour:
+                    continue
+                if status == "0":
+                    free_slots.append((slot_start, slot_end))
+
             date_user_slots[date].append(free_slots)
             if date not in date_list:
                 date_list.append(date)
