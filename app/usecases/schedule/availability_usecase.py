@@ -18,7 +18,7 @@ async def get_availability_usecase(schedule_req: ScheduleRequest) -> Availabilit
         graph_api_client = GraphAPIClient()
         schedule_info_list = graph_api_client.get_schedules(schedule_req)
         logger.info(f"スケジュール情報取得完了: {len(schedule_info_list)}件")
-        # logger.info(f"スケジュール情報: {schedule_info_list}")
+        logger.info(f"スケジュール情報: {schedule_info_list}")
         common_times = _calculate_common_times(schedule_req, schedule_info_list)
         logger.info(f"共通の空き時間計算完了: {len(common_times)}件の候補時間を特定")
         return AvailabilityResponse(common_availability=common_times)
@@ -39,6 +39,8 @@ def _calculate_common_times(schedule_req: ScheduleRequest, schedule_info_list: L
         schedule_req.start_date,
         schedule_req.end_date,
     )
+    logger.info(f"date_user_slots: {date_user_slots}")
+    logger.info(f"date_list: {date_list}")
 
     return calculate_common_availability(
         date_user_slots,

@@ -158,10 +158,8 @@ def split_candidates(candidates: List[List[str]], duration_minutes: int) -> List
         # ISO形式からdatetimeへ変換
         start_dt = datetime.fromisoformat(start)
         end_dt = datetime.fromisoformat(end)
-
         # 開始・終了の差分を計算
         time_diff = (end_dt - start_dt).total_seconds() / 60
-
         # 特殊処理: 60分の場合かつ1時間半のケース
         if duration_minutes == 60 and time_diff == 90:
             # 最初の60分スロット
@@ -214,30 +212,24 @@ def aggregate_user_availability(
     start_date: str,
     end_date: str,
 ) -> Tuple[Dict[str, List[List[Tuple[float, float]]]], List[str]]:
-    """ユーザーごとの空き時間を集約する"""
     date_user_slots = defaultdict(list)
     date_list = []
 
     start_date_dt = datetime.strptime(start_date, "%Y-%m-%d")
     end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
+    date_sequence = [
+        (start_date_dt + timedelta(days=i)).strftime("%Y-%m-%d")
+        for i in range((end_date_dt - start_date_dt).days + 1)
+    ]
 
     for schedule_info in schedule_info_list:
-        for v in schedule_info.get("value", []):
+        for idx, v in enumerate(schedule_info.get("value", [])):
+            if idx >= len(date_sequence):
+                continue  # 念のため保険
+
+            date = date_sequence[idx]  # ← リクエストした日付とインデックスで対応
             availability_view = v.get("availabilityView", "")
             if not availability_view:
-                continue
-
-            # 予定がある日の最初のscheduleItemから日付を特定（正確にはリクエスト時の順番に依存）
-            # より正確にしたい場合は Graph API のレスポンス順を信用する必要あり
-            for item in v.get("scheduleItems", []):
-                date = item["start"]["dateTime"][:10]
-                break
-            else:
-                # scheduleItemsが空でも、availabilityViewがあるならstart_dateを仮採用
-                date = start_date
-
-            date_dt = datetime.strptime(date, "%Y-%m-%d")
-            if not (start_date_dt <= date_dt <= end_date_dt):
                 continue
 
             free_slots = []
@@ -249,9 +241,10 @@ def aggregate_user_availability(
                 if status == "0":
                     free_slots.append((slot_start, slot_end))
 
-            date_user_slots[date].append(free_slots)
-            if date not in date_list:
-                date_list.append(date)
+            if free_slots:
+                date_user_slots[date].append(free_slots)
+                if date not in date_list:
+                    date_list.append(date)
 
     return date_user_slots, date_list
 
