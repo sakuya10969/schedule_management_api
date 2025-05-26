@@ -4,6 +4,7 @@ from msal import ConfidentialClientApplication
 from app.config.config import get_config
 
 logger = logging.getLogger(__name__)
+
 config = get_config()
 
 def get_access_token() -> str:
