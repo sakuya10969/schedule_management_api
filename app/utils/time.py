@@ -175,7 +175,6 @@ def split_candidates(candidates: List[List[str]], duration_minutes: int) -> List
                 end_dt.strftime("%Y-%m-%dT%H:%M:%S")
             ])
             continue
-
         # 通常の分割処理
         delta = timedelta(minutes=duration_minutes)
         current = start_dt
