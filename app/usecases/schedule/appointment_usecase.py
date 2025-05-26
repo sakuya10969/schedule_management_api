@@ -7,6 +7,7 @@ from app.infrastructure.graph_api import GraphAPIClient
 from app.infrastructure.az_cosmos import AzCosmosDBClient
 from app.utils.formatting import parse_candidate, format_candidate_date
 from app.config.config import get_config
+from app.infrastructure.appointment_repository import AppointmentRepository
 
 logger = logging.getLogger(__name__)
 

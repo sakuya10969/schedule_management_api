@@ -14,6 +14,8 @@ class AppointmentRequest(BaseModel):
     company: str = Field(..., description="候補者の所属会社")
     email: str = Field(..., description="候補者のメールアドレス")
     token: str = Field(..., description="フォームデータのトークン")
+    candidate_id: str = Field(..., description="候補者のID")
+    stage: str = Field(..., description="候補者のステージ")
 
     class Config:
         json_schema_extra = {
@@ -28,6 +30,8 @@ class AppointmentRequest(BaseModel):
                 "company": "株式会社サンプル",
                 "email": "shunsuke.aoki0913@gmail.com",
                 "token": "sample-token-123",
+                "candidate_id": "1234567890",
+                "stage": "1",
             }
         }
 class AppointmentResponse(BaseModel):
