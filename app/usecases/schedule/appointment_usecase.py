@@ -155,11 +155,11 @@ def send_no_available_schedule_emails(appointment_req: AppointmentRequest) -> No
         "別の日程を提示するか、直接候補者と調整をお願いします。<br><br>"
         "※このメールは自動送信されています。"
     )
-
-    for to_email in appointment_req.users:
+    if appointment_req.users:
+        target_user_email = appointment_req.users[0]
         graph_api_client.send_email(
             config['SYSTEM_SENDER_EMAIL'],
-            to_email,
+            target_user_email,
             subject,
             body
         )
