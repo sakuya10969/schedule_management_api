@@ -1,5 +1,6 @@
 import logging
 from fastapi.responses import HTMLResponse, RedirectResponse
+
 from app.infrastructure.az_cosmos import AzCosmosDBClient
 from app.infrastructure.graph_api import GraphAPIClient
 from app.config.config import get_config
@@ -77,7 +78,7 @@ def _show_complete_page(token: str) -> HTMLResponse:
         ]
     )
 
-def _generate_html(token: str, title: str, message: str, buttons: list) -> HTMLResponse:
+def _generate_html(title: str, message: str, buttons: list) -> HTMLResponse:
     """HTMLレスポンスを生成"""
     buttons_html = "".join([
         f'<a href="{button["url"]}" '
