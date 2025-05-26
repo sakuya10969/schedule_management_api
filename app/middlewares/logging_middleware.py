@@ -34,7 +34,11 @@ async def log_requests(request: Request, call_next):
         response_body = b""
         async for chunk in response.body_iterator:
             response_body += chunk
-        response.body_iterator = aiter([response_body])
+
+        async def new_body_iterator():
+            yield response_body
+
+        response.body_iterator = new_body_iterator()
 
         # レスポンスログ
         log_msg = (
