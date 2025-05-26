@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
-from typing import List, Tuple, Union, Dict
+from typing import List, Tuple, Union, Dict, Any, Set
 import logging
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -81,107 +82,38 @@ def find_common_slots(
     if not free_slots_list or required_participants <= 0:
         return []
 
-    slot_users: Dict[Tuple[float, float], List[str]] = {}
+    EPS = 1e-6
     duration_hours = duration_minutes / 60.0
+    slot_users: Dict[Tuple[float, float], Set[str]] = {}
 
+    # スロットごとのユーザー割り当て
     for i, user_slots in enumerate(free_slots_list):
         user = users[i] if i < len(users) else f"User-{i}"
-        filtered_slots = [
-            slot for slot in user_slots
-            if start_hour <= slot[0] and slot[1] <= end_hour
-        ]
-        for slot in filtered_slots:
-            slot_users.setdefault(slot, []).append(user)
+        for slot in user_slots:
+            if start_hour <= slot[0] and slot[1] <= end_hour:
+                slot_users.setdefault(slot, set()).add(user)
 
-    available_slots = [slot for slot, user_list in slot_users.items() if len(user_list) >= required_participants]
+    # 必要人数を満たすスロットだけ抽出
+    available_slots = [
+        slot for slot, user_set in slot_users.items()
+        if len(user_set) >= required_participants
+    ]
     available_slots.sort(key=lambda x: x[0])
 
+    # スロットの連結（連続時間を満たす範囲を抽出）
     continuous_ranges = find_continuous_slots(available_slots, duration_hours)
 
-    result = [(r, []) for r in continuous_ranges]
-    for idx, (range_str, _) in enumerate(result):
+    # 最終チェック：その連続時間帯を本当にカバーできているユーザーだけ抽出
+    result = []
+    for range_str in continuous_ranges:
         start, end = map(float, range_str.split(" - "))
-        participants = set(users)
+        participants = []
         for i, user_slots in enumerate(free_slots_list):
             user = users[i] if i < len(users) else f"User-{i}"
-            covered = any(s <= start and e >= end for s, e in user_slots)
-            if not covered:
-                participants.discard(user)
-        result[idx] = (range_str, list(participants))
-
-    return [r for r in result if len(r[1]) >= required_participants]
-
-def find_common_availability_in_date_range(
-    free_slots_list: List[List[Tuple[float, float]]], 
-    duration_minutes: int,
-    start_date: str,
-    end_date: str,
-    start_hour: float,
-    end_hour: float,
-    required_participants: int,
-    users: List[Union[str, object]]
-) -> Dict[str, Union[List[str], List[Tuple[str, List[str]]]]]:
-    """指定された日付範囲内で共通の空き時間を日付ごとに探索する"""
-    if not free_slots_list:
-        return {}
-
-    start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-    end_dt = datetime.strptime(end_date, "%Y-%m-%d")
-    result = {}
-
-    while start_dt <= end_dt:
-        current_date = start_dt.strftime("%Y-%m-%d")
-
-        slots = find_common_slots(
-            free_slots_list,
-            users,
-            required_participants,
-            duration_minutes,
-            start_hour,
-            end_hour
-        )
-
-        if slots:
-            result[current_date] = slots
-
-        start_dt += timedelta(days=1)
-
-    return result
-
-def find_common_availability_participants_in_date_range(
-    free_slots_list: List[List[Tuple[float, float]]],
-    duration_minutes: int,
-    required_participants: int,
-    users: List[Union[str, object]],
-    start_date: str,
-    end_date: str,
-    start_hour: float,
-    end_hour: float
-) -> Dict[str, List[Tuple[str, List[str]]]]:
-    """日付範囲内で必要参加者数を満たす共通の空き時間を探索し、参加可能なユーザーリストも返す
-    30分単位で時間枠を区切って探索を行う
-    """
-    if not free_slots_list:
-        return {}
-
-    required_slots = (duration_minutes + 29) // 30
-    start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-    end_dt = datetime.strptime(end_date, "%Y-%m-%d")
-    result = {}
-
-    while start_dt <= end_dt:
-        current_date = start_dt.strftime("%Y-%m-%d")
-        slots = find_common_slots(
-            free_slots_list,
-            users,
-            required_participants,
-            required_slots,
-            start_hour,
-            end_hour
-        )
-        if slots:
-            result[current_date] = slots
-        start_dt += timedelta(days=1)
+            if any(s - EPS <= start and e + EPS >= end for s, e in user_slots):
+                participants.append(user)
+        if len(participants) >= required_participants:
+            result.append((range_str, participants))
 
     return result
 
@@ -257,4 +189,76 @@ def split_candidates(candidates: List[List[str]], duration_minutes: int) -> List
             ])
             current = next_time
 
+    return result
+
+def parse_availability(schedule_data: Dict[str, Any], start_hour: float, end_hour: float, slot_duration: float) -> List[Tuple[float, float]]:
+    """1ユーザー・1日分の空き時間をパースする"""
+    schedules_info = schedule_data.get("value", [])
+    result: List[Tuple[float, float]] = []
+    for schedule in schedules_info:
+        availability_view = schedule.get("availabilityView", "")
+        for i, status in enumerate(availability_view):
+            slot_start = start_hour + i * slot_duration
+            slot_end = slot_start + slot_duration
+            if slot_end > end_hour:
+                continue
+            if status == "0":
+                result.append((slot_start, slot_end))
+    return result
+
+def aggregate_user_availability(
+    schedule_info_list: List[Dict[str, Any]],
+    start_hour: float,
+    end_hour: float,
+    slot_duration: float,
+    start_date: str,
+    end_date: str,
+) -> Tuple[Dict[str, List[List[Tuple[float, float]]]], List[str]]:
+    """ユーザーごとの空き時間を集約する"""
+    date_user_slots = defaultdict(list)
+    date_list = []
+
+    start_date_dt = datetime.strptime(start_date, "%Y-%m-%d")
+    end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
+
+    for _, schedule_info in enumerate(schedule_info_list):
+        free_slots = parse_availability(schedule_info, start_hour, end_hour, slot_duration)
+
+        # availabilityView は start_date に対応している前提で進める
+        date = start_date
+        date_dt = datetime.strptime(date, "%Y-%m-%d")
+
+        if start_date_dt <= date_dt <= end_date_dt:
+            date_user_slots[date].append(free_slots)
+            if date not in date_list:
+                date_list.append(date)
+
+    return date_user_slots, date_list
+
+def calculate_common_availability(
+    date_user_slots: Dict[str, List[List[Tuple[float, float]]]],
+    date_list: List[str],
+    users: List[Union[str, object]],
+    required_participants: int,
+    duration_minutes: int,
+    start_hour: float,
+    end_hour: float
+) -> List[List[str]]:
+    """日付ごとの共通の空き時間を計算する"""
+    result = []
+    for date in date_list:
+        user_slots_list = date_user_slots[date]
+        if not user_slots_list or len(user_slots_list) < required_participants:
+            continue
+        common_slots = find_common_slots(
+            user_slots_list,
+            users,
+            required_participants,
+            duration_minutes,
+            start_hour,
+            end_hour
+        )
+        for slot, _ in common_slots:
+            start_dt, end_dt = format_slot_to_datetime_str(date, slot)
+            result.append([start_dt, end_dt])
     return result
