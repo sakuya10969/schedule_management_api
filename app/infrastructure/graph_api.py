@@ -86,7 +86,7 @@ class GraphAPIClient:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"予定登録エラー: {str(e)}")
 
-    def send_email(self, sender_email: str, to_email: str, subject: str, body: str) -> None:
+    def send_email(self, sender_email: str, target_user_email: str, subject: str, body: str) -> None:
         """メールを送信"""
         try:
             endpoint = f"{self.BASE_URL}/{sender_email}/sendMail"
@@ -97,7 +97,7 @@ class GraphAPIClient:
                         "contentType": "HTML",
                         "content": body,
                     },
-                    "toRecipients": [{"emailAddress": {"address": to_email}}]
+                    "toRecipients": [{"emailAddress": {"address": target_user_email}}]
                 }
             }
             self.post_request(endpoint, email_data)

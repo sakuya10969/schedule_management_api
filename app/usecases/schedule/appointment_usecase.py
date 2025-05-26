@@ -107,11 +107,12 @@ def send_confirmation_emails(appointment_req: AppointmentRequest, meeting_urls: 
         f"・日程<br>{format_candidate_date(appointment_req.candidate)}<br>"
         f'・会議URL<br><a href="{meeting_url}">{meeting_url}</a><br><br>'
     )
-    for to_email in appointment_req.users:
+    if appointment_req.users:
+        target_user_email = appointment_req.users[0]
         graph_api_client.send_email(
-            config['SYSTEM_SENDER_EMAIL'], 
-            to_email, 
-            subject, 
+            config['SYSTEM_SENDER_EMAIL'],
+            target_user_email,
+            subject,
             body
         )
 
