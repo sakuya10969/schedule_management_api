@@ -85,24 +85,20 @@ def find_common_slots(
     EPS = 1e-6
     duration_hours = duration_minutes / 60.0
     slot_users: Dict[Tuple[float, float], Set[str]] = {}
-
     # スロットごとのユーザー割り当て
     for i, user_slots in enumerate(free_slots_list):
         user = users[i] if i < len(users) else f"User-{i}"
         for slot in user_slots:
             if start_hour <= slot[0] and slot[1] <= end_hour:
                 slot_users.setdefault(slot, set()).add(user)
-
     # 必要人数を満たすスロットだけ抽出
     available_slots = [
         slot for slot, user_set in slot_users.items()
         if len(user_set) >= required_participants
     ]
     available_slots.sort(key=lambda x: x[0])
-
     # スロットの連結（連続時間を満たす範囲を抽出）
     continuous_ranges = find_continuous_slots(available_slots, duration_hours)
-
     # 最終チェック：その連続時間帯を本当にカバーできているユーザーだけ抽出
     result = []
     for range_str in continuous_ranges:
@@ -220,12 +216,11 @@ def aggregate_user_availability(
         (start_date_dt + timedelta(days=i)).strftime("%Y-%m-%d")
         for i in range((end_date_dt - start_date_dt).days + 1)
     ]
-
+    
     for schedule_info in schedule_info_list:
         for idx, v in enumerate(schedule_info.get("value", [])):
             if idx >= len(date_sequence):
                 continue  # 念のため保険
-
             date = date_sequence[idx]  # ← リクエストした日付とインデックスで対応
             availability_view = v.get("availabilityView", "")
             if not availability_view:
