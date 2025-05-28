@@ -51,7 +51,7 @@ class FormData(BaseModel):
     users: List[User]
     required_participants: int
     time_zone: str = "Tokyo Standard Time"
-    isConfirmed: bool = False
+    is_confirmed: bool = False
     candidates: List[List[str]] | None = None
     event_ids: dict | None = None
 
@@ -69,7 +69,7 @@ class FormData(BaseModel):
                     {"email": "y.ohama@intelligentforce.co.jp"},
                 ],
                 "time_zone": "Tokyo Standard Time",
-                "isConfirmed": False,
+                "is_confirmed": False,
                 "candidates": [
                     ["2025-01-10T10:00:00", "2025-01-10T11:00:00"],
                     ["2025-01-10T14:00:00", "2025-01-10T15:00:00"],

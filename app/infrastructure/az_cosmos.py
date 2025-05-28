@@ -114,7 +114,7 @@ class AzCosmosDBClient:
         """フォームを確定状態に更新"""
         try:
             form = self.get_form_data(token)
-            form["isConfirmed"] = True
+            form["is_confirmed"] = True
             self.container.replace_item(item=form["id"], body=form)
         except exceptions.CosmosResourceNotFoundError:
             logger.error(f"確定対象のトークンが見つかりません: {token}")

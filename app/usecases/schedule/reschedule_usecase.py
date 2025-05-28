@@ -33,7 +33,7 @@ async def reschedule_usecase(token: str, confirm: bool) -> HTMLResponse:
                 raise
 
         # フォームのリセット
-        form["isConfirmed"] = False
+        form["is_confirmed"] = False
         form.pop("event_ids", None)
         cosmos_db_client.update_form_with_events(token, form)
 
