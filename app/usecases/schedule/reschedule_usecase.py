@@ -16,7 +16,7 @@ async def reschedule_usecase(cosmos_db_id: str, confirm: bool) -> HTMLResponse:
         form = cosmos_db_client.get_form_data(cosmos_db_id)
         
         if "event_ids" not in form:
-            redirect_url = f"{config['CLIENT_URL']}/appointment?cosmos_db_id={cosmos_db_id}"
+            redirect_url = f"{config['CLIENT_URL']}/appointment?cosmosDbId={cosmos_db_id}"
             return RedirectResponse(url=redirect_url, status_code=302)
 
         if not confirm:
