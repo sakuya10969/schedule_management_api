@@ -72,7 +72,7 @@ def generate_subslots(start: float, end: float, duration: float) -> List[str]:
 
 def find_common_slots(
     free_slots_list: List[List[Tuple[float, float]]],
-    users: List[Union[str, object]],
+    employee_emails: List[Union[str, object]],
     required_participants: int,
     duration_minutes: int,
     start_hour: float = 0.0,
@@ -87,7 +87,7 @@ def find_common_slots(
     slot_users: Dict[Tuple[float, float], Set[str]] = {}
     # スロットごとのユーザー割り当て
     for i, user_slots in enumerate(free_slots_list):
-        user = users[i] if i < len(users) else f"User-{i}"
+        user = employee_emails[i] if i < len(employee_emails) else f"EmployeeEmail-{i}"
         for slot in user_slots:
             if start_hour <= slot[0] and slot[1] <= end_hour:
                 slot_users.setdefault(slot, set()).add(user)
@@ -105,9 +105,9 @@ def find_common_slots(
         start, end = map(float, range_str.split(" - "))
         participants = []
         for i, user_slots in enumerate(free_slots_list):
-            user = users[i] if i < len(users) else f"User-{i}"
+            employee_email = employee_emails[i] if i < len(employee_emails) else f"EmployeeEmail-{i}"
             if any(s - EPS <= start and e + EPS >= end for s, e in user_slots):
-                participants.append(user)
+                participants.append(employee_email)
         if len(participants) >= required_participants:
             result.append((range_str, participants))
 
@@ -144,13 +144,13 @@ def format_availability_result(
                 result.append([start_dt, end_dt])
     return result
 
-def split_candidates(candidates: List[List[str]], duration_minutes: int) -> List[List[str]]:
+def split_candidates(schedule_interview_datetimes: List[List[str]], duration_minutes: int) -> List[List[str]]:
     """候補時間を指定された分単位で分割する
     60分の場合は1時間半の特殊ケースにも対応し、30分ずらしで2つの60分枠を生成
     """
     result = []
 
-    for start, end in candidates:
+    for start, end in schedule_interview_datetimes:
         # ISO形式からdatetimeへ変換
         start_dt = datetime.fromisoformat(start)
         end_dt = datetime.fromisoformat(end)
@@ -245,7 +245,7 @@ def aggregate_user_availability(
 def calculate_common_availability(
     date_user_slots: Dict[str, List[List[Tuple[float, float]]]],
     date_list: List[str],
-    users: List[Union[str, object]],
+    employee_emails: List[Union[str, object]],
     required_participants: int,
     duration_minutes: int,
     start_hour: float,
@@ -259,7 +259,7 @@ def calculate_common_availability(
             continue
         common_slots = find_common_slots(
             user_slots_list,
-            users,
+            employee_emails,
             required_participants,
             duration_minutes,
             start_hour,

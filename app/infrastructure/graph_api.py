@@ -57,10 +57,10 @@ class GraphAPIClient:
 
             delta = timedelta(days=1)
             while start <= end:
-                for user in schedule_req.users:
-                    url = f"{self.BASE_URL}/{urllib.parse.quote(user.email)}/calendar/getSchedule"
+                for employee_email in schedule_req.employee_emails:
+                    url = f"{self.BASE_URL}/{urllib.parse.quote(employee_email.email)}/calendar/getSchedule"
                     body = {
-                        "schedules": [user.email],
+                        "schedules": [employee_email.email],
                         "startTime": {
                             "dateTime": f"{start.date()}T{schedule_req.start_time}:00",
                             "timeZone": schedule_req.time_zone
@@ -78,15 +78,15 @@ class GraphAPIClient:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"スケジュール取得エラー: {str(e)}")
 
-    def register_event(self, user_email: str, event: Dict[str, Any]) -> Dict[str, Any]:
+    def register_event(self, employee_email: str, event: Dict[str, Any]) -> Dict[str, Any]:
         """予定を登録"""
         try:
-            url = f"{self.BASE_URL}/{urllib.parse.quote(user_email)}/calendar/events"
+            url = f"{self.BASE_URL}/{urllib.parse.quote(employee_email)}/calendar/events"
             return self.post_request(url, event)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"予定登録エラー: {str(e)}")
 
-    def send_email(self, sender_email: str, target_user_email: str, subject: str, body: str) -> None:
+    def send_email(self, sender_email: str, target_employee_email: str, subject: str, body: str) -> None:
         """メールを送信"""
         try:
             endpoint = f"{self.BASE_URL}/{sender_email}/sendMail"
@@ -97,17 +97,17 @@ class GraphAPIClient:
                         "contentType": "HTML",
                         "content": body,
                     },
-                    "toRecipients": [{"emailAddress": {"address": target_user_email}}]
+                    "toRecipients": [{"emailAddress": {"address": target_employee_email}}]
                 }
             }
             self.post_request(endpoint, email_data)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"メール送信エラー: {str(e)}")
 
-    def delete_event(self, user_email: str, event_id: str) -> None:
+    def delete_event(self, employee_email: str, event_id: str) -> None:
         """予定を削除するためのGraph API呼び出し"""
         try:
-            url = f"{self.BASE_URL}/{urllib.parse.quote(user_email)}/events/{event_id}"
+            url = f"{self.BASE_URL}/{urllib.parse.quote(employee_email)}/events/{event_id}"
             self._handle_request("DELETE", url)
         except requests.RequestException as e:
             raise HTTPException(status_code=500, detail=f"Graph APIイベント削除エラー: {e}")

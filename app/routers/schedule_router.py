@@ -31,12 +31,12 @@ async def create_appointment(
 
 @router.get("/reschedule")
 async def reschedule(
-    token: str = Query(..., description="フォームのトークン"),
+    az_cosmos_id: str = Query(..., description="フォームのトークン"),
     confirm: bool = Query(False, description="キャンセル処理確認フラグ"),
 ):
     """日程再調整の確認および実行"""
     try:
-        return await reschedule_usecase(token, confirm)
+        return await reschedule_usecase(az_cosmos_id, confirm)
     except Exception as e:
         logger.error(f"リスケジュールエラー: {e}")
         raise HTTPException(status_code=500, detail="リスケジュールエラー")

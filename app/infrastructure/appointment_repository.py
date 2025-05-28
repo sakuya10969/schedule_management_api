@@ -28,9 +28,9 @@ class AppointmentRepository:
     def create_appointment(self, appointment_req: AppointmentRequest):
         values = {
             "candidate": appointment_req.candidate,
-            "user": appointment_req.user,
-            "lastname": appointment_req.lastname,
-            "firstname": appointment_req.firstname,
+            "employee_email": appointment_req.employee_email,
+            "candidate_lastname": appointment_req.candidate_lastname,
+            "candidate_firstname": appointment_req.candidate_firstname,
             "company": appointment_req.company,
             "email": appointment_req.email,
             "token": appointment_req.token,

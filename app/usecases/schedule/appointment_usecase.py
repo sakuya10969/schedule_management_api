@@ -25,7 +25,7 @@ async def create_appointment_usecase(
                 message="候補として '可能な日程がない' が選択されました。予定は登録されません。",
                 subjects=[],
                 meeting_urls=[],
-                users=appointment_req.users,
+                employee_email=appointment_req.employee_email,
             )
 
         # 候補日をパースしてイベントを作成・登録
@@ -43,7 +43,7 @@ async def create_appointment_usecase(
             message="予定を登録しました。確認メールは別途送信されます。",
             subjects=[e.get("subject") for e in created_events],
             meeting_urls=meeting_urls,
-            users=appointment_req.users,
+            employee_email=appointment_req.employee_email,
         )
 
     except Exception as e:
@@ -54,12 +54,12 @@ def _create_and_register_events(appointment_req: AppointmentRequest) -> List[Dic
     """候補日をパースしてイベントを作成・登録し、IDを保存"""
     try:
         # 候補日をパース
-        start_str, end_str, selected_candidate = parse_candidate(appointment_req.candidate)
+        start_str, end_str, selected_candidate = parse_candidate(appointment_req.schedule_interview_datetime)
         logger.info(f"候補日パース成功: {start_str} - {end_str}")
 
         # イベントを作成
         event = {
-            "subject": f"面接: {appointment_req.lastname} {appointment_req.firstname}",
+            "subject": f"面接: {appointment_req.candidate_lastname} {appointment_req.candidate_firstname}",
             "body": {
                 "contentType": "HTML",
                 "content": f"候補日: {start_str} - {end_str}"
@@ -73,22 +73,22 @@ def _create_and_register_events(appointment_req: AppointmentRequest) -> List[Dic
         # イベントを登録
         graph_api_client = GraphAPIClient()
         created_events = []
-        for user_email in appointment_req.users:
+        for employee_email in appointment_req.employee_emails:
             try:
-                event_resp = graph_api_client.register_event(user_email, event)
+                event_resp = graph_api_client.register_event(employee_email.email, event)
                 created_events.append(event_resp)
-                logger.info(f"イベント登録成功: {user_email} - {event_resp.get('id')}")
+                logger.info(f"イベント登録成功: {employee_email} - {event_resp.get('id')}")
             except Exception as e:
-                logger.error(f"イベント登録失敗: {user_email} - {e}")
+                logger.error(f"イベント登録失敗: {employee_email} - {e}")
 
         # イベントIDを保存
         event_ids = {
-            user_email: event.get("id")
-            for user_email, event in zip(appointment_req.users, created_events)
+            employee_email: event.get("id")
+            for employee_email, event in zip(appointment_req.employee_emails, created_events)
             if event.get("id")
         }
         cosmos_db_client = AzCosmosDBClient()
-        cosmos_db_client.update_form_with_events(appointment_req.token, event_ids)
+        cosmos_db_client.update_form_with_events(appointment_req.az_cosmos_id, event_ids)
 
         return created_events
 
@@ -102,35 +102,35 @@ def send_confirmation_emails(appointment_req: AppointmentRequest, meeting_urls: 
     meeting_url = meeting_urls[0] if isinstance(meeting_urls, list) else meeting_urls
     
     # 内部関係者向けメール送信
-    subject = f"【{appointment_req.company}/{appointment_req.lastname}{appointment_req.firstname}様】日程確定"
+    subject = f"【{appointment_req.company}/{appointment_req.candidate_lastname}{appointment_req.candidate_firstname}様】日程確定"
     body = (
         "日程調整が完了しました。詳細は下記の通りです。<br><br>"
-        f"・氏名<br>{appointment_req.lastname} {appointment_req.firstname}<br>"
+        f"・氏名<br>{appointment_req.candidate_lastname} {appointment_req.candidate_firstname}<br>"
         f"・所属<br>{appointment_req.company}<br>"
-        f"・メールアドレス<br>{appointment_req.email}<br>"
-        f"・日程<br>{format_candidate_date(appointment_req.candidate)}<br>"
+        f"・メールアドレス<br>{appointment_req.candidate_email}<br>"
+        f"・日程<br>{format_candidate_date(appointment_req.schedule_interview_datetime)}<br>"
         f'・会議URL<br><a href="{meeting_url}">{meeting_url}</a><br><br>'
     )
-    if appointment_req.users:
-        target_user_email = appointment_req.users[0]
+    if appointment_req.employee_emails:
+        target_employee_email = appointment_req.employee_email
         graph_api_client.send_email(
             config['SYSTEM_SENDER_EMAIL'],
-            target_user_email,
+            target_employee_email,
             subject,
             body
         )
 
     # クライアント向けメール送信
     subject = "日程確定（インテリジェントフォース）"
-    reschedule_link = f"{config['API_URL']}/reschedule?token={appointment_req.token}"
+    reschedule_link = f"{config['API_URL']}/reschedule?token={appointment_req.az_cosmos_id}"
     body = (
-        f"{appointment_req.lastname}様<br><br>"
+        f"{appointment_req.candidate_lastname}様<br><br>"
         "この度は日程を調整いただきありがとうございます。<br>"
         "ご登録いただいた内容、および当日の会議URLは下記の通りです。<br><br>"
-        f"・氏名<br>{appointment_req.lastname} {appointment_req.firstname}<br><br>"
+        f"・氏名<br>{appointment_req.candidate_lastname} {appointment_req.candidate_firstname}<br><br>"
         f"・所属<br>{appointment_req.company}<br><br>"
-        f"・メールアドレス<br>{appointment_req.email}<br><br>"
-        f"・日程<br>{format_candidate_date(appointment_req.candidate)}<br><br>"
+        f"・メールアドレス<br>{appointment_req.candidate_email}<br><br>"
+        f"・日程<br>{format_candidate_date(appointment_req.schedule_interview_datetime)}<br><br>"
         f"・会議URL<br><a href=\"{meeting_url}\">{meeting_url}</a><br><br>"
         "※日程の再調整が必要な場合はこちらからご対応ください：<br>"
         f"<a href=\"{reschedule_link}\">{reschedule_link}</a><br>"
@@ -140,7 +140,7 @@ def send_confirmation_emails(appointment_req: AppointmentRequest, meeting_urls: 
     )
     graph_api_client.send_email(
         config['SYSTEM_SENDER_EMAIL'],
-        appointment_req.email,
+        appointment_req.candidate_email,
         subject,
         body
     )
@@ -148,22 +148,22 @@ def send_confirmation_emails(appointment_req: AppointmentRequest, meeting_urls: 
 def send_no_available_schedule_emails(appointment_req: AppointmentRequest) -> None:
     """可能な日程がない場合のメールを担当者に送信する"""
     graph_api_client = GraphAPIClient()
-    subject = f"【{appointment_req.company}/{appointment_req.lastname}{appointment_req.firstname}様】日程確定"
+    subject = f"【{appointment_req.company}/{appointment_req.candidate_lastname}{appointment_req.candidate_firstname}様】日程確定"
     body = (
-        f"{appointment_req.lastname}様<br><br>"
+        f"{appointment_req.candidate_lastname}様<br><br>"
         "以下の候補者から日程調整の回答がありましたが、提示された日程では面接の調整ができませんでした。<br><br>"
-        f"・氏名<br>{appointment_req.lastname} {appointment_req.firstname}<br><br>"
+        f"・氏名<br>{appointment_req.candidate_lastname} {appointment_req.candidate_firstname}<br><br>"
         f"・所属<br>{appointment_req.company}<br><br>"
-        f"・メールアドレス<br>{appointment_req.email}<br><br>"
+        f"・メールアドレス<br>{appointment_req.candidate_email}<br><br>"
         "候補者からは「可能な日程がない」との回答がありました。<br>"
         "別の日程を提示するか、直接候補者と調整をお願いします。<br><br>"
         "※このメールは自動送信されています。"
     )
-    if appointment_req.users:
-        target_user_email = appointment_req.users[0]
+    if appointment_req.employee_emails:
+        target_employee_email = appointment_req.employee_email
         graph_api_client.send_email(
             config['SYSTEM_SENDER_EMAIL'],
-            target_user_email,
+            target_employee_email,
             subject,
             body
         )

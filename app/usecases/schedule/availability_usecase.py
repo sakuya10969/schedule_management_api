@@ -45,7 +45,7 @@ def _calculate_common_times(schedule_req: ScheduleRequest, schedule_info_list: L
     return calculate_common_availability(
         date_user_slots,
         date_list,
-        schedule_req.users,
+        schedule_req.employee_emails,
         schedule_req.required_participants,
         schedule_req.duration_minutes,
         start_hour,
