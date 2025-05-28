@@ -11,7 +11,6 @@ class EmployeeEmail(BaseModel):
 
 class ScheduleRequest(BaseModel):
     """スケジュールリクエストを表すスキーマ"""
-
     start_date: str = Field(..., description="開始日 (YYYY-MM-DD形式)")
     end_date: str = Field(..., description="終了日 (YYYY-MM-DD形式)")
     start_time: str = Field(..., description="開始時間 (HH:MM形式)")
@@ -41,7 +40,6 @@ class ScheduleRequest(BaseModel):
 
 class FormData(BaseModel):
     """フォームデータを表すスキーマ"""
-
     start_date: str
     end_date: str
     start_time: str

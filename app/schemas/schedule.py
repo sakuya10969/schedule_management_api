@@ -3,7 +3,6 @@ from typing import Optional, List
 
 class AppointmentRequest(BaseModel):
     """面接予約リクエストを表すスキーマ"""
-
     schedule_interview_datetime: Optional[str] = Field(
         None,
         description="選択された候補日時（'none' または '開始日時,終了日時' の形式）",
@@ -33,7 +32,6 @@ class AppointmentRequest(BaseModel):
         }
 class AppointmentResponse(BaseModel):
     """面接予約レスポンスを表すスキーマ"""
-
     message: str = Field(..., description="処理結果のメッセージ")
     subjects: List[str] = Field(..., description="作成された予定の件名リスト")
     meeting_urls: List[str | None] = Field(..., description="オンライン会議のURLリスト")
@@ -51,7 +49,6 @@ class AppointmentResponse(BaseModel):
 
 class AvailabilityResponse(BaseModel):
     """空き時間候補のレスポンスを表すスキーマ"""
-
     common_availability: List[List[str]] = Field(
         ...,
         description="共通の空き時間候補のリスト（開始日時と終了日時のリストのリスト）",
