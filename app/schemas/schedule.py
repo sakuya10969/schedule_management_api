@@ -8,7 +8,7 @@ class AppointmentRequest(BaseModel):
         None,
         description="選択された候補日時（'none' または '開始日時,終了日時' の形式）",
     )
-    users: List[str] = Field(..., description="面接担当者のメールアドレスリスト")
+    user: str = Field(..., description="面接担当者のメールアドレス")
     lastname: str = Field(..., description="候補者の姓")
     firstname: str = Field(..., description="候補者の名")
     company: str = Field(..., description="候補者の所属会社")
@@ -21,10 +21,7 @@ class AppointmentRequest(BaseModel):
         json_schema_extra = {
             "example": {
                 "candidate": "2025-01-10T10:00:00,2025-01-10T11:00:00",
-                "users": [
-                    "crawler01@intelligentforce.co.jp",
-                    "crawler02@intelligentforce.co.jp",
-                ],
+                "user": "crawler01@intelligentforce.co.jp",
                 "lastname": "青木",
                 "firstname": "駿介",
                 "company": "株式会社サンプル",
@@ -40,7 +37,7 @@ class AppointmentResponse(BaseModel):
     message: str = Field(..., description="処理結果のメッセージ")
     subjects: List[str] = Field(..., description="作成された予定の件名リスト")
     meeting_urls: List[str | None] = Field(..., description="オンライン会議のURLリスト")
-    users: List[str] = Field(..., description="面接担当者のメールアドレスリスト")
+    user: str = Field(..., description="面接担当者のメールアドレス")
 
     class Config:
         json_schema_extra = {
@@ -48,10 +45,7 @@ class AppointmentResponse(BaseModel):
                 "message": "予定を登録しました。確認メールは別途送信されます。",
                 "subjects": ["面接: 青木 駿介 (株式会社サンプル)"],
                 "meeting_urls": ["https://teams.microsoft.com/l/meetup-join/..."],
-                "users": [
-                    "crawler01@intelligentforce.co.jp",
-                    "crawler02@intelligentforce.co.jp",
-                ],
+                "user": "crawler01@intelligentforce.co.jp",
             }
         }
 
