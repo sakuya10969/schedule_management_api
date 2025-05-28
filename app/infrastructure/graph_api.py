@@ -90,12 +90,18 @@ class GraphAPIClient:
         """メールを送信"""
         try:
             endpoint = f"{self.BASE_URL}/{sender_email}/sendMail"
+            modified_body = (
+                "<div style=\"font-family: 'Segoe UI', Calibri, Arial, sans-serif; "
+                "font-size: 14px; line-height: 1.6; color: #333; margin: 0; padding: 0;\">"
+                f"{body}"
+                "</div>"
+            )
             email_data = {
                 "message": {
                     "subject": subject,
                     "body": {
                         "contentType": "HTML",
-                        "content": body,
+                        "content": modified_body,
                     },
                     "toRecipients": [{"emailAddress": {"address": target_employee_email}}]
                 }
