@@ -32,11 +32,16 @@ async def create_appointment_usecase(
                 employee_email=appointment_req.employee_email,
             )
 
-        created_events = _create_and_register_events(appointment_req)
+        # Graph APIでイベント登録
+        created_events = _register_events_to_graph_api(appointment_req)
         if not created_events:
             raise RuntimeError("Graph API がイベントを返しませんでした")
 
-        AppointmentRepository().create_appointment(appointment_req)
+        # Cosmos DBにイベントIDを保存
+        _store_event_ids_to_cosmos(appointment_req, created_events)
+
+        appointment_repository = AppointmentRepository()
+        appointment_repository.create_appointment(appointment_req)
 
         meeting_urls: List[Optional[str]] = [
             (e.get("onlineMeeting") or {}).get("joinUrl") if e else None
@@ -55,9 +60,8 @@ async def create_appointment_usecase(
         logger.exception("予定作成ユースケースエラー: %s", e)
         raise
 
-def _create_and_register_events(appointment_req: AppointmentRequest) -> List[Dict[str, Any]]:
-    """候補日をパースしてイベントを作成・登録し、ID を Cosmos DB に保存"""
-
+def _register_events_to_graph_api(appointment_req: AppointmentRequest) -> List[Dict[str, Any]]:
+    """Graph APIにイベントを登録"""
     if not appointment_req.schedule_interview_datetime:
         raise ValueError("schedule_interview_datetime is required")
 
@@ -65,18 +69,37 @@ def _create_and_register_events(appointment_req: AppointmentRequest) -> List[Dic
     if not (start_str and end_str):
         raise ValueError(f"Invalid datetime format. start={start_str}, end={end_str}")
 
-    logger.info("候補日パース成功: %s - %s", start_str, end_str)
-
     event_payload = {
-        "subject": f"面接: {appointment_req.candidate_lastname} {appointment_req.candidate_firstname} ({appointment_req.company})",
+        "subject": f"【{appointment_req.company}/{appointment_req.candidate_lastname}{appointment_req.candidate_firstname}様】日程確定",
         "body": {
             "contentType": "HTML",
-            "content": f"候補日: {start_str} - {end_str}",
+            "content": (
+                "日程調整が完了しました。詳細は下記の通りです。<br><br>"
+                f"・氏名<br>{appointment_req.candidate_lastname} {appointment_req.candidate_firstname}<br>"
+                f"・所属<br>{appointment_req.company}<br>"
+                f"・メールアドレス<br>{appointment_req.candidate_email}<br>"
+                f"・日程<br>{format_candidate_date(appointment_req.schedule_interview_datetime)}<br><br>"
+            ),
         },
-        "start": {"dateTime": start_str, "timeZone": "Tokyo Standard Time"},
-        "end": {"dateTime": end_str, "timeZone": "Tokyo Standard Time"},
+        "start": {
+            "dateTime": start_str,
+            "timeZone": "Tokyo Standard Time"
+        },
+        "end": {
+            "dateTime": end_str,
+            "timeZone": "Tokyo Standard Time"
+        },
         "isOnlineMeeting": True,
         "onlineMeetingProvider": "teamsForBusiness",
+        "attendees": [
+            {
+                "emailAddress": {
+                    "address": appointment_req.candidate_email,
+                    "name": f"{appointment_req.candidate_lastname} {appointment_req.candidate_firstname}"
+                },
+                "type": "required"
+            }
+        ]
     }
 
     graph_api_client = GraphAPIClient()
@@ -92,21 +115,24 @@ def _create_and_register_events(appointment_req: AppointmentRequest) -> List[Dic
         logger.exception("イベント登録失敗: %s", e)
         raise
 
+    return created_events
+
+def _store_event_ids_to_cosmos(appointment_req: AppointmentRequest, created_events: List[Dict[str, Any]]) -> None:
+    """Cosmos DBにイベントIDを保存"""
     if not appointment_req.cosmos_db_id:
         logger.warning("cosmos_db_id が無いため CosmosDB の更新をスキップします")
-        return created_events
+        return
 
     try:
         event_ids = {appointment_req.employee_email: created_events[0]["id"]}
-        AzCosmosDBClient().update_form_with_events(
+        az_cosmos_db_client = AzCosmosDBClient()
+        az_cosmos_db_client.update_form_with_events(
             appointment_req.cosmos_db_id,
             event_ids,
         )
     except Exception as e:
         logger.exception("Cosmos DB 更新失敗: %s", e)
         # 更新失敗してもイベントは作成済みなので、ここでは例外を再スローせずログのみ残す
-
-    return created_events
 
 def send_confirmation_emails(
     appointment_req: AppointmentRequest,
@@ -127,7 +153,7 @@ def send_confirmation_emails(
         f"・所属<br>{appointment_req.company}<br>"
         f"・メールアドレス<br>{appointment_req.candidate_email}<br>"
         f"・日程<br>{format_candidate_date(appointment_req.schedule_interview_datetime)}<br>"
-        f'・会議URL<br><a href="{meeting_url}">{meeting_url}</a><br><br>'
+        f"・会議URL<br><a href=\"{meeting_url}\">{meeting_url}</a><br><br>"
     )
     if appointment_req.employee_email:
         graph_api_client.send_email(
@@ -163,7 +189,6 @@ def send_confirmation_emails(
         client_subject,
         client_body,
     )
-
 
 def send_no_available_schedule_emails(appointment_req: AppointmentRequest) -> None:
     if not appointment_req.employee_email:
