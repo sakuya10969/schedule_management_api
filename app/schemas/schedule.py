@@ -14,7 +14,7 @@ class AppointmentRequest(BaseModel):
     company: str = Field(..., description="候補者の所属会社")
     candidate_email: str = Field(..., description="候補者のメールアドレス")
     cosmos_db_id: Optional[str] = Field(None, description="CosmosDBのID")
-    candidate_id: Optional[str] = Field(None, description="候補者のID")
+    candidate_id: Optional[int] = Field(None, description="候補者のID")
     interview_stage: Optional[str] = Field(None, description="面接のステージ")
 
     class Config:

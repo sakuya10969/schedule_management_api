@@ -23,19 +23,19 @@ class AppointmentRepository:
 
         self.meta = MetaData()
         self.meta.reflect(bind=self.engine)
-        self.appointments = self.meta.tables["appointments"]
+        self.appointments = self.meta.tables["schedule_management"]
 
     def create_appointment(self, appointment_req: AppointmentRequest):
         values = {
-            "schedule_interview_datetime": appointment_req.schedule_interview_datetime,
+            "scheduled_interview_datetime": appointment_req.schedule_interview_datetime,
             "employee_email": appointment_req.employee_email,
             "candidate_lastname": appointment_req.candidate_lastname,
             "candidate_firstname": appointment_req.candidate_firstname,
             "company": appointment_req.company,
             "candidate_email": appointment_req.candidate_email,
             "cosmos_db_id": appointment_req.cosmos_db_id,
-            "candidate_id": appointment_req.candidate_id,
-            "interview_stage": appointment_req.interview_stage,
+            "candidate_id": appointment_req.candidate_id or None,
+            "interview_stage": appointment_req.interview_stage or None,
         }
 
         with self.engine.begin() as conn:

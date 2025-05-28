@@ -1,6 +1,6 @@
 import logging
 from fastapi import BackgroundTasks
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from app.schemas import AppointmentRequest, AppointmentResponse
 from app.infrastructure.graph_api import GraphAPIClient
@@ -14,11 +14,15 @@ logger = logging.getLogger(__name__)
 config = get_config()
 
 async def create_appointment_usecase(
-    background_tasks: BackgroundTasks, appointment_req: AppointmentRequest
+    background_tasks: BackgroundTasks,
+    appointment_req: AppointmentRequest,
 ) -> AppointmentResponse:
     """面接担当者の予定を登録し、確認メールを送信するユースケース"""
+
     try:
-        if not appointment_req.schedule_interview_datetime or appointment_req.schedule_interview_datetime.lower() == "none":
+        if not appointment_req.schedule_interview_datetime or (
+            appointment_req.schedule_interview_datetime.lower() == "none"
+        ):
             logger.info("候補として '可能な日程がない' が選択されました。予定は登録されません。")
             background_tasks.add_task(send_no_available_schedule_emails, appointment_req)
             return AppointmentResponse(
@@ -28,77 +32,96 @@ async def create_appointment_usecase(
                 employee_email=appointment_req.employee_email,
             )
 
-        # 候補日をパースしてイベントを作成・登録
         created_events = _create_and_register_events(appointment_req)
+        if not created_events:
+            raise RuntimeError("Graph API がイベントを返しませんでした")
 
-        # イベント登録が成功した後にデータベースに予定を保存
-        appointment_repository = AppointmentRepository()
-        appointment_repository.create_appointment(appointment_req)
+        AppointmentRepository().create_appointment(appointment_req)
 
-        # 確認メールを送信
-        meeting_urls = [e.get("onlineMeeting", {}).get("joinUrl") for e in created_events]
+        meeting_urls: List[Optional[str]] = [
+            (e.get("onlineMeeting") or {}).get("joinUrl") if e else None
+            for e in created_events
+        ]
         background_tasks.add_task(send_confirmation_emails, appointment_req, meeting_urls)
 
         return AppointmentResponse(
             message="予定を登録しました。確認メールは別途送信されます。",
-            subjects=[e.get("subject") for e in created_events],
+            subjects=[e.get("subject") if e else None for e in created_events],
             meeting_urls=meeting_urls,
             employee_email=appointment_req.employee_email,
         )
 
     except Exception as e:
-        logger.error(f"予定作成ユースケースエラー: {e}")
+        logger.exception("予定作成ユースケースエラー: %s", e)
         raise
 
 def _create_and_register_events(appointment_req: AppointmentRequest) -> List[Dict[str, Any]]:
-    """候補日をパースしてイベントを作成・登録し、IDを保存"""
+    """候補日をパースしてイベントを作成・登録し、ID を Cosmos DB に保存"""
+
+    if not appointment_req.schedule_interview_datetime:
+        raise ValueError("schedule_interview_datetime is required")
+
+    start_str, end_str, _ = parse_candidate(appointment_req.schedule_interview_datetime)
+    if not (start_str and end_str):
+        raise ValueError(f"Invalid datetime format. start={start_str}, end={end_str}")
+
+    logger.info("候補日パース成功: %s - %s", start_str, end_str)
+
+    event_payload = {
+        "subject": f"面接: {appointment_req.candidate_lastname} {appointment_req.candidate_firstname} ({appointment_req.company})",
+        "body": {
+            "contentType": "HTML",
+            "content": f"候補日: {start_str} - {end_str}",
+        },
+        "start": {"dateTime": start_str, "timeZone": "Tokyo Standard Time"},
+        "end": {"dateTime": end_str, "timeZone": "Tokyo Standard Time"},
+        "isOnlineMeeting": True,
+        "onlineMeetingProvider": "teamsForBusiness",
+    }
+
+    graph_api_client = GraphAPIClient()
+    created_events: List[Dict[str, Any]] = []
+
     try:
-        # 候補日をパース
-        start_str, end_str, selected_candidate = parse_candidate(appointment_req.schedule_interview_datetime)
-        logger.info(f"候補日パース成功: {start_str} - {end_str}")
-
-        # イベントを作成
-        event = {
-            "subject": f"面接: {appointment_req.candidate_lastname} {appointment_req.candidate_firstname}",
-            "body": {
-                "contentType": "HTML",
-                "content": f"候補日: {start_str} - {end_str}"
-            },
-            "start": {"dateTime": start_str, "timeZone": "Tokyo Standard Time"},
-            "end": {"dateTime": end_str, "timeZone": "Tokyo Standard Time"},
-            "isOnlineMeeting": True,
-            "onlineMeetingProvider": "teamsForBusiness",
-        }
-
-        # イベントを登録
-        graph_api_client = GraphAPIClient()
-        created_events = []
-        try:
-            event_resp = graph_api_client.register_event(appointment_req.employee_email, event)
-            created_events.append(event_resp)
-            logger.info(f"イベント登録成功: {appointment_req.employee_email} - {event_resp.get('id')}")
-        except Exception as e:
-            logger.error(f"イベント登録失敗: {appointment_req.employee_email} - {e}")
-
-        # イベントIDを保存
-        event_ids = {appointment_req.employee_email: event.get("id")}
-        cosmos_db_client = AzCosmosDBClient()
-        cosmos_db_client.update_form_with_events(appointment_req.cosmos_db_id, event_ids)
-
-        return created_events
-
+        event_resp = graph_api_client.register_event(appointment_req.employee_email, event_payload)
+        if not event_resp or "id" not in event_resp:
+            raise RuntimeError(f"Graph API returned invalid response: {event_resp}")
+        created_events.append(event_resp)
+        logger.info("イベント登録成功: %s - %s", appointment_req.employee_email, event_resp["id"])
     except Exception as e:
-        logger.error(f"イベント作成・登録処理失敗: {e}")
+        logger.exception("イベント登録失敗: %s", e)
         raise
 
-def send_confirmation_emails(appointment_req: AppointmentRequest, meeting_urls: List[str]) -> None:
-    """内部向けおよび先方向けの確認メール送信処理をまとめる。"""
+    if not appointment_req.cosmos_db_id:
+        logger.warning("cosmos_db_id が無いため CosmosDB の更新をスキップします")
+        return created_events
+
+    try:
+        event_ids = {appointment_req.employee_email: created_events[0]["id"]}
+        AzCosmosDBClient().update_form_with_events(
+            appointment_req.cosmos_db_id,
+            event_ids,
+        )
+    except Exception as e:
+        logger.exception("Cosmos DB 更新失敗: %s", e)
+        # 更新失敗してもイベントは作成済みなので、ここでは例外を再スローせずログのみ残す
+
+    return created_events
+
+def send_confirmation_emails(
+    appointment_req: AppointmentRequest,
+    meeting_urls: List[Optional[str]],
+) -> None:
     graph_api_client = GraphAPIClient()
-    meeting_url = meeting_urls[0] if isinstance(meeting_urls, list) else meeting_urls
-    
-    # 内部関係者向けメール送信
-    subject = f"【{appointment_req.company}/{appointment_req.candidate_lastname}{appointment_req.candidate_firstname}様】日程確定"
-    body = (
+    meeting_url = next((url for url in meeting_urls if url), None)
+    if meeting_url is None:
+        raise ValueError("会議 URL が取得できませんでした")
+
+    # 内部向け
+    internal_subject = (
+        f"【{appointment_req.company}/{appointment_req.candidate_lastname}{appointment_req.candidate_firstname}様】日程確定"
+    )
+    internal_body = (
         "日程調整が完了しました。詳細は下記の通りです。<br><br>"
         f"・氏名<br>{appointment_req.candidate_lastname} {appointment_req.candidate_firstname}<br>"
         f"・所属<br>{appointment_req.company}<br>"
@@ -107,18 +130,19 @@ def send_confirmation_emails(appointment_req: AppointmentRequest, meeting_urls: 
         f'・会議URL<br><a href="{meeting_url}">{meeting_url}</a><br><br>'
     )
     if appointment_req.employee_email:
-        target_employee_email = appointment_req.employee_email
         graph_api_client.send_email(
-            config['SYSTEM_SENDER_EMAIL'],
-            target_employee_email,
-            subject,
-            body
+            config["SYSTEM_SENDER_EMAIL"],
+            appointment_req.employee_email,
+            internal_subject,
+            internal_body,
         )
 
-    # クライアント向けメール送信
-    subject = "日程確定（インテリジェントフォース）"
-    reschedule_link = f"{config['API_URL']}/reschedule?cosmos_db_id={appointment_req.cosmos_db_id}"
-    body = (
+    # クライアント向け
+    client_subject = "日程確定（インテリジェントフォース）"
+    reschedule_link = (
+        f"{config['API_URL']}/reschedule?cosmos_db_id={appointment_req.cosmos_db_id or ''}"
+    )
+    client_body = (
         f"{appointment_req.candidate_lastname}様<br><br>"
         "この度は日程を調整いただきありがとうございます。<br>"
         "ご登録いただいた内容、および当日の会議URLは下記の通りです。<br><br>"
@@ -134,16 +158,22 @@ def send_confirmation_emails(appointment_req: AppointmentRequest, meeting_urls: 
         "当日はどうぞよろしくお願いいたします。"
     )
     graph_api_client.send_email(
-        config['SYSTEM_SENDER_EMAIL'],
+        config["SYSTEM_SENDER_EMAIL"],
         appointment_req.candidate_email,
-        subject,
-        body
+        client_subject,
+        client_body,
     )
 
+
 def send_no_available_schedule_emails(appointment_req: AppointmentRequest) -> None:
-    """可能な日程がない場合のメールを担当者に送信する"""
+    if not appointment_req.employee_email:
+        logger.warning("employee_email が無いため通知メールをスキップします")
+        return
+
     graph_api_client = GraphAPIClient()
-    subject = f"【{appointment_req.company}/{appointment_req.candidate_lastname}{appointment_req.candidate_firstname}様】日程確定"
+    subject = (
+        f"【{appointment_req.company}/{appointment_req.candidate_lastname}{appointment_req.candidate_firstname}様】日程確定"
+    )
     body = (
         f"{appointment_req.candidate_lastname}様<br><br>"
         "以下の候補者から日程調整の回答がありましたが、提示された日程では面接の調整ができませんでした。<br><br>"
@@ -154,11 +184,9 @@ def send_no_available_schedule_emails(appointment_req: AppointmentRequest) -> No
         "別の日程を提示するか、直接候補者と調整をお願いします。<br><br>"
         "※このメールは自動送信されています。"
     )
-    if appointment_req.employee_email:
-        target_employee_email = appointment_req.employee_email
-        graph_api_client.send_email(
-            config['SYSTEM_SENDER_EMAIL'],
-            target_employee_email,
-            subject,
-            body
-        )
+    graph_api_client.send_email(
+        config["SYSTEM_SENDER_EMAIL"],
+        appointment_req.employee_email,
+        subject,
+        body,
+    )
