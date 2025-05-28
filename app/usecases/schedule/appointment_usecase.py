@@ -31,6 +31,10 @@ async def create_appointment_usecase(
         # 候補日をパースしてイベントを作成・登録
         created_events = _create_and_register_events(appointment_req)
 
+        # イベント登録が成功した後にデータベースに予定を保存
+        appointment_repository = AppointmentRepository()
+        appointment_repository.create_appointment(appointment_req)
+
         # 確認メールを送信
         meeting_urls = [e.get("onlineMeeting", {}).get("joinUrl") for e in created_events]
         background_tasks.add_task(send_confirmation_emails, appointment_req, meeting_urls)
