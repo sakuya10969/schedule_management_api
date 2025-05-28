@@ -220,8 +220,8 @@ def aggregate_user_availability(
     for schedule_info in schedule_info_list:
         for idx, v in enumerate(schedule_info.get("value", [])):
             if idx >= len(date_sequence):
-                continue  # 念のため保険
-            date = date_sequence[idx]  # ← リクエストした日付とインデックスで対応
+                continue
+            date = date_sequence[idx]
             availability_view = v.get("availabilityView", "")
             if not availability_view:
                 continue
