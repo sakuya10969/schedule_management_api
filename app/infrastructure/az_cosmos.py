@@ -59,7 +59,7 @@ class AzCosmosDBClient:
             logger.error(f"フォームデータ取得エラー: {e}")
             raise HTTPException(status_code=500, detail="データ取得エラー")
 
-    def update_form_with_events(self, cosmos_db_id: str, event_ids: Dict[str, str]) -> None:
+    def update_form_data(self, cosmos_db_id: str, event_ids: Dict[str, str], schedule_interview_datetime: str) -> None:
         """イベントIDをフォームデータに追加する"""
         max_retries = 3
         retry_count = 0
@@ -68,6 +68,7 @@ class AzCosmosDBClient:
             try:
                 form = self.container.read_item(item=cosmos_db_id, partition_key=config['AZ_COSMOS_DB_PARTITION_KEY'])
                 form["event_ids"] = event_ids
+                form["schedule_interview_datetime"] = schedule_interview_datetime
                 self.container.replace_item(item=form["id"], body=form)
                 return
             except exceptions.CosmosResourceNotFoundError:

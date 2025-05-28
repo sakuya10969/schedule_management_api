@@ -126,9 +126,10 @@ def _store_event_ids_to_cosmos(appointment_req: AppointmentRequest, created_even
     try:
         event_ids = {appointment_req.employee_email: created_events[0]["id"]}
         az_cosmos_db_client = AzCosmosDBClient()
-        az_cosmos_db_client.update_form_with_events(
+        az_cosmos_db_client.update_form_data(
             appointment_req.cosmos_db_id,
             event_ids,
+            appointment_req.schedule_interview_datetime,
         )
     except Exception as e:
         logger.exception("Cosmos DB 更新失敗: %s", e)

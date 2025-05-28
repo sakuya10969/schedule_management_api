@@ -35,7 +35,7 @@ async def reschedule_usecase(cosmos_db_id: str, confirm: bool) -> HTMLResponse:
         # フォームのリセット
         form["is_confirmed"] = False
         form.pop("event_ids", None)
-        cosmos_db_client.update_form_with_events(cosmos_db_id, form)
+        cosmos_db_client.update_form_with_data(cosmos_db_id, form, None)
 
         return _show_complete_page(cosmos_db_id)
 

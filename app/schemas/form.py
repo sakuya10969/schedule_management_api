@@ -54,6 +54,7 @@ class FormData(BaseModel):
     is_confirmed: bool = False
     schedule_interview_datetimes: List[List[str]] | None = None
     event_ids: dict | None = None
+    schedule_interview_datetime: str | None = None
 
     class Config:
         json_schema_extra = {
@@ -75,5 +76,6 @@ class FormData(BaseModel):
                     ["2025-01-10T14:00:00", "2025-01-10T15:00:00"],
                 ],
                 "event_ids": None,
+                "schedule_interview_datetime": "2025-01-10T10:00:00",
             }
         }
