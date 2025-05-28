@@ -16,21 +16,21 @@ async def store_form_data(payload: FormData = Body(...)):
     フォームデータを保存し、一意のトークンを返すエンドポイント
     """
     try:
-        az_cosmos_id = await store_form_data_usecase(payload)
-        return JSONResponse(content={"az_cosmos_id": az_cosmos_id})
+        cosmos_db_id = await store_form_data_usecase(payload)
+        return JSONResponse(content={"cosmos_db_id": cosmos_db_id})
     except Exception as e:
         logger.error(f"フォームデータの保存に失敗しました: {e}")
         raise HTTPException(status_code=500, detail="Failed to store form data")
 
 @router.get("/retrieve_form_data", response_model=FormData)
 async def retrieve_form_data(
-    az_cosmos_id: str = Query(..., description="保存済みフォームデータのトークン")
+    cosmos_db_id: str = Query(..., description="保存済みフォームデータのトークン")
 ):
     """
     トークンから保存されたフォームデータを復元し、空き時間を含めて返すエンドポイント
     """
     try:
-        form_data = await retrieve_form_data_usecase(az_cosmos_id)
+        form_data = await retrieve_form_data_usecase(cosmos_db_id)
         return form_data
     except Exception as e:
         logger.error(f"フォームデータの取得に失敗しました: {e}")

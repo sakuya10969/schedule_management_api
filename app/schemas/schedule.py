@@ -1,10 +1,10 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import Optional, List
 
 class AppointmentRequest(BaseModel):
     """面接予約リクエストを表すスキーマ"""
 
-    schedule_interview_datetime: str | None = Field(
+    schedule_interview_datetime: Optional[str] = Field(
         None,
         description="選択された候補日時（'none' または '開始日時,終了日時' の形式）",
     )
@@ -13,9 +13,9 @@ class AppointmentRequest(BaseModel):
     candidate_firstname: str = Field(..., description="候補者の名")
     company: str = Field(..., description="候補者の所属会社")
     candidate_email: str = Field(..., description="候補者のメールアドレス")
-    az_cosmos_id: str = Field(..., description="CosmosDBのID")
-    candidate_id: str = Field(..., description="候補者のID")
-    interview_stage: str = Field(..., description="面接のステージ")
+    cosmos_db_id: Optional[str] = Field(None, description="CosmosDBのID")
+    candidate_id: Optional[str] = Field(None, description="候補者のID")
+    interview_stage: Optional[str] = Field(None, description="面接のステージ")
 
     class Config:
         json_schema_extra = {
@@ -26,7 +26,7 @@ class AppointmentRequest(BaseModel):
                 "candidate_firstname": "駿介",
                 "company": "株式会社サンプル",
                 "candidate_email": "shunsuke.aoki0913@gmail.com",
-                "az_cosmos_id": "sample-token-123",
+                "cosmos_db_id": "sample-az-cosmos-id-123",
                 "candidate_id": "1234567890",
                 "interview_stage": "1",
             }

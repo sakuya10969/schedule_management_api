@@ -27,15 +27,15 @@ class AppointmentRepository:
 
     def create_appointment(self, appointment_req: AppointmentRequest):
         values = {
-            "candidate": appointment_req.candidate,
+            "schedule_interview_datetime": appointment_req.schedule_interview_datetime,
             "employee_email": appointment_req.employee_email,
             "candidate_lastname": appointment_req.candidate_lastname,
             "candidate_firstname": appointment_req.candidate_firstname,
             "company": appointment_req.company,
-            "email": appointment_req.email,
-            "token": appointment_req.token,
+            "candidate_email": appointment_req.candidate_email,
+            "cosmos_db_id": appointment_req.cosmos_db_id,
             "candidate_id": appointment_req.candidate_id,
-            "stage": appointment_req.stage,
+            "interview_stage": appointment_req.interview_stage,
         }
 
         with self.engine.begin() as conn:
