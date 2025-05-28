@@ -14,9 +14,16 @@ class AppointmentRepository:
     def create_appointment(self, appointment_req: AppointmentRequest):
         with self.engine.connect() as conn:
             stmt = insert(self.appointments).values(
-                title=appointment_req.title,
-                start_time=appointment_req.start_time,
-                end_time=appointment_req.end_time,
+                candidate=appointment_req.candidate,
+                user=appointment_req.user,
+                lastname=appointment_req.lastname,
+                firstname=appointment_req.firstname,
+                company=appointment_req.company,
+                email=appointment_req.email,
+                token=appointment_req.token,
+                candidate_id=appointment_req.candidate_id,
+                stage=appointment_req.stage,
             )
+
             conn.execute(stmt)
             conn.commit()
