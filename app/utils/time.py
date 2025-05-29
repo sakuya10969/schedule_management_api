@@ -217,18 +217,19 @@ def aggregate_user_availability(
         for i in range((end_date_dt - start_date_dt).days + 1)
     ]
     
-    for schedule_info in schedule_info_list:
-        for idx, v in enumerate(schedule_info.get("value", [])):
-            if idx >= len(date_sequence):
-                continue
-            date = date_sequence[idx]
+    for i, schedule_info in enumerate(schedule_info_list):
+        if i >= len(date_sequence):
+            continue
+        date = date_sequence[i]
+
+        for v in schedule_info.get("value", []):
             availability_view = v.get("availabilityView", "")
             if not availability_view:
                 continue
 
             free_slots = []
-            for i, status in enumerate(availability_view):
-                slot_start = start_hour + i * slot_duration
+            for j, status in enumerate(availability_view):
+                slot_start = start_hour + j * slot_duration
                 slot_end = slot_start + slot_duration
                 if slot_end > end_hour:
                     continue
