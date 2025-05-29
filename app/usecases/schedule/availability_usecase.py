@@ -33,6 +33,7 @@ def _calculate_common_times(schedule_req: ScheduleRequest, schedule_info_list: L
 
     date_user_slots, date_list = aggregate_user_availability(
         schedule_info_list,
+        schedule_req.employee_emails,
         start_hour,
         end_hour,
         slot_duration,
