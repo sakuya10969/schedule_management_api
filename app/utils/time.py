@@ -1,303 +1,228 @@
 from datetime import datetime, timedelta
-from typing import List, Tuple, Union, Dict, Any, Set
-import logging
+from typing import Any, Dict, List, Set, Tuple, Union
 from collections import defaultdict
+import logging
+import math
 
 logger = logging.getLogger(__name__)
 
+# 1. 時間文字列のパース関連
+EPS: float = 1e-6  # 浮動小数点誤差許容
+DateStr = str
+HourFloat = float
+Slot = Tuple[HourFloat, HourFloat]
 
-def time_string_to_float(time_str: str) -> float:
-    """'HH:MM'形式の時刻文字列を小数時間に変換する (例: '13:30' -> 13.5)"""
-    hour, minute = map(int, time_str.split(":"))
-    return hour + minute / 60.0
+def time_string_to_float(time_str: str) -> HourFloat:
+    """'HH:MM' 形式の文字列を小数時間(float)に変換する。例: '13:30' → 13.5"""
+    h, m = map(int, time_str.split(":"))
+    return h + m / 60.0
 
+def float_to_hm(hour_val: HourFloat) -> Tuple[int, int]:
+    """小数時間(float)を (時, 分) のタプルに変換する。例: 13.5 → (13, 30)"""
+    h = int(hour_val)
+    m = int(round((hour_val - h) * 60))
+    return h, m
 
-def parse_time_str_to_datetime(start_date: str, float_hour: float) -> datetime:
-    """日付文字列と小数時間から datetime オブジェクトを生成する"""
-    start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
-    day_offset = int(float_hour // 24)
-    remainder_hours = float_hour % 24
-    hour = int(remainder_hours)
-    minute = int(round((remainder_hours - hour) * 60))
-    new_date = start_dt + timedelta(days=day_offset)
-    return datetime(new_date.year, new_date.month, new_date.day, hour, minute)
+def parse_time_str_to_datetime(date_str: DateStr, hour_val: HourFloat) -> datetime:
+    """日付文字列と小数時間から tz-naive の datetime オブジェクトを生成する。例: ('2023-01-01', 13.5) → datetime(2023, 1, 1, 13, 30)"""
+    base_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+    day_offset, hour_remainder = divmod(hour_val, 24)
+    h, m = float_to_hm(hour_remainder)
+    return datetime(base_date.year, base_date.month, base_date.day, h, m) + timedelta(days=int(day_offset))
 
+def parse_slot_str(slot: str) -> Slot:
+    """'9.0 - 10.5' のようなスロット文字列を (float, float) のタプルに変換する。"""
+    start, end = map(str.strip, slot.split("-"))
+    return float(start), float(end)
 
-def parse_slot_str(slot_str: str) -> Tuple[float, float]:
-    """時間範囲文字列を開始・終了時刻の小数タプルに変換する (例: '21.5 - 22.5' -> (21.5, 22.5))"""
-    start_str, end_str = map(str.strip, slot_str.split("-"))
-    return float(start_str), float(end_str)
+def slot_to_datetime(date_str: DateStr, slot: Slot) -> Tuple[datetime, datetime]:
+    """日付文字列とスロットタプルから、開始・終了の datetime タプルを返す。"""
+    s, e = slot
+    return parse_time_str_to_datetime(date_str, s), parse_time_str_to_datetime(date_str, e)
 
-
-def parse_slot(start_date: str, slot_str: str) -> Tuple[datetime, datetime]:
-    """日付と時間範囲から開始・終了日時のタプルを生成する"""
-    start_hour, end_hour = parse_slot_str(slot_str)
-    start_dt = parse_time_str_to_datetime(start_date, start_hour)
-    end_dt = parse_time_str_to_datetime(start_date, end_hour)
-    return start_dt, end_dt
-
-
-def slot_to_time(start_date: str, slots: List[str]) -> List[Tuple[datetime, datetime]]:
-    """時間範囲のリストを datetime タプルのリストに変換する"""
-    return [parse_slot(start_date, slot) for slot in slots]
-
-
-def generate_subslots(start: float, end: float, duration: float) -> List[str]:
-    """指定された時間範囲内で、指定時間長の部分時間枠を生成する"""
-    result = []
-    current = start
-    while current + duration <= end + 1e-6:
-        result.append(f"{round(current, 2)} - {round(current + duration, 2)}")
-        current += duration
-    return result
-
-
-def find_continuous_slots(
-    slots: List[Tuple[float, float]], duration: float
-) -> List[str]:
-    """指定された時間長に合致する連続した時間枠を抽出する"""
-    if not slots or duration <= 0:
-        return []
-
-    sorted_slots = sorted(slots, key=lambda x: x[0])
-    result = []
-    current_slot = None
-
-    for slot in sorted_slots:
-        if current_slot is None:
-            current_slot = slot
-        elif abs(current_slot[1] - slot[0]) < 1e-2:
-            current_slot = (current_slot[0], slot[1])
-        else:
-            result.extend(generate_subslots(current_slot[0], current_slot[1], duration))
-            current_slot = slot
-
-    if current_slot is not None:
-        result.extend(generate_subslots(current_slot[0], current_slot[1], duration))
-
-    return sorted(result, key=lambda x: float(x.split(" - ")[0]))
-
-
-def format_slot_to_datetime_str(date_str: str, slot_str: str) -> Tuple[str, str]:
-    """時間枠を ISO 8601形式の日時文字列に変換する
-    例: ('2023-10-01', '13.5 - 14.5') -> ('2023-10-01T13:30:00', '2023-10-01T14:30:00')
-    """
-    start_hour, end_hour = parse_slot_str(slot_str)
-    base_date = datetime.strptime(date_str, "%Y-%m-%d")
-    start_dt = base_date + timedelta(hours=start_hour)
-    end_dt = base_date + timedelta(hours=end_hour)
+def slot_str_to_iso(date_str: DateStr, slot_str: str) -> Tuple[str, str]:
+    """日付文字列とスロット文字列から、ISO8601形式の開始・終了時刻文字列を返す。"""
+    s, e = parse_slot_str(slot_str)
+    start_dt, end_dt = slot_to_datetime(date_str, (s, e))
     return start_dt.isoformat(), end_dt.isoformat()
 
+# 2. スロット操作関連
+def generate_subslots(start: HourFloat, end: HourFloat, length: HourFloat) -> List[str]:
+    """[start, end] の範囲内で、長さ length の連続スロットをすべて列挙し、スロット文字列リストで返す。"""
+    cur = start
+    slots: List[str] = []
+    while cur + length <= end + EPS:
+        slots.append(f"{cur:.2f} - {(cur + length):.2f}")
+        cur += length
+    return slots
 
-def format_availability_result(
-    available_slots: Dict[str, Union[List[str], List[Tuple[str, List[str]]]]],
-) -> List[List[str]]:
-    """空き時間の結果を ISO 8601形式の日時文字列のリストに変換する"""
-    result = []
-    for date_str, slots in available_slots.items():
-        if isinstance(slots[0], tuple):
-            result.extend(
-                [format_slot_to_datetime_str(date_str, slot) for slot, _ in slots]
-            )
+def merge_adjacent(slots: List[Slot]) -> List[Slot]:
+    """隣接（端点一致）するスロットをマージする。前提: ソート済み。例: [(9.0, 10.0), (10.0, 11.0)] → [(9.0, 11.0)]"""
+    if not slots:
+        return []
+    merged = [slots[0]]
+    for s, e in slots[1:]:
+        prev_s, prev_e = merged[-1]
+        if math.isclose(prev_e, s, abs_tol=EPS):
+            merged[-1] = (prev_s, e)
         else:
-            result.extend(
-                [format_slot_to_datetime_str(date_str, slot) for slot in slots]
-            )
-    return [[start, end] for start, end in result]
+            merged.append((s, e))
+    return merged
 
+def find_continuous_slots(slots: List[Slot], length: HourFloat) -> List[str]:
+    """必要な長さ length を満たす連続領域をスロット文字列で返す。例: [(9.0, 12.0)], 1.0 → ['9.00 - 10.00', '10.00 - 11.00', '11.00 - 12.00']"""
+    cont: List[str] = []
+    for merged_start, merged_end in merge_adjacent(sorted(slots, key=lambda x: x[0])):
+        cont.extend(generate_subslots(merged_start, merged_end, length))
+    return sorted(cont, key=lambda x: float(x.split(" - ")[0]))
 
-def split_candidates(
-    schedule_interview_datetimes: List[List[str]], duration_minutes: int
-) -> List[List[str]]:
-    """候補時間を指定された分単位で分割する"""
-    result = []
+def split_candidates(candidates: List[List[str]], length_min: int) -> List[List[str]]:
+    """[[ISO, ISO]] のペアを length_min 分割する。60分枠で90分の区間が来た場合は 60+60-30 の特殊ロジックも踏襲。"""
+    out: List[List[str]] = []
+    delta = timedelta(minutes=length_min)
 
-    for start, end in schedule_interview_datetimes:
-        start_dt = datetime.fromisoformat(start)
-        end_dt = datetime.fromisoformat(end)
-        time_diff = (end_dt - start_dt).total_seconds() / 60
+    for start_iso, end_iso in candidates:
+        start_dt, end_dt = map(datetime.fromisoformat, (start_iso, end_iso))
+        total_min = (end_dt - start_dt).total_seconds() / 60
 
-        if duration_minutes == 60 and time_diff == 90:
-            first_end = start_dt + timedelta(minutes=60)
-            second_start = start_dt + timedelta(minutes=30)
-            result.extend(
-                [
-                    [start_dt.isoformat(), first_end.isoformat()],
-                    [second_start.isoformat(), end_dt.isoformat()],
-                ]
-            )
+        # 特殊ケース: 90分幅を 60+60-30 に分割 (採用ロジックそのまま)
+        if length_min == 60 and math.isclose(total_min, 90, abs_tol=EPS):
+            out.append([start_dt.isoformat(), (start_dt + delta).isoformat()])
+            out.append([(start_dt + timedelta(minutes=30)).isoformat(), end_dt.isoformat()])
             continue
 
-        delta = timedelta(minutes=duration_minutes)
-        current = start_dt
-        while current < end_dt:
-            next_time = min(current + delta, end_dt)
-            result.append([current.isoformat(), next_time.isoformat()])
-            current = next_time
+        cur = start_dt
+        while cur < end_dt - EPS * timedelta(days=1):
+            nxt = min(cur + delta, end_dt)
+            out.append([cur.isoformat(), nxt.isoformat()])
+            cur = nxt
+    return out
 
-    return result
-
-
-def parse_availability(
-    schedule_data: Dict[str, Any],
-    start_hour: float,
-    end_hour: float,
-    slot_duration: float,
-) -> List[Tuple[float, float]]:
-    """1ユーザー・1日分の空き時間をパースする"""
-    result = []
-    for schedule in schedule_data.get("value", []):
-        availability_view = schedule.get("availabilityView", "")
-        for i, status in enumerate(availability_view):
-            if status != "0":
-                continue
-            slot_start = start_hour + i * slot_duration
-            slot_end = slot_start + slot_duration
-            if slot_end <= end_hour:
-                result.append((slot_start, slot_end))
-    return result
-
-
+# 3. 空き時間計算のコア機能
 def extract_email(val: Union[str, object]) -> str:
-    """EmployeeEmail 型 or str から生アドレス文字列を取り出す"""
+    """オブジェクトまたは文字列からメールアドレスを抽出する。オブジェクトの場合は .email 属性を参照し、なければそのまま返す。"""
     return getattr(val, "email", val)
 
+def _slot_users_map(
+    free_slots_list: List[List[Slot]],
+    employee_emails: List[Union[str, object]],
+    start_hour: HourFloat,
+    end_hour: HourFloat,
+) -> Dict[Slot, Set[str]]:
+    """各スロットごとに利用可能なユーザーのメールアドレスを集計する。"""
+    mapping: Dict[Slot, Set[str]] = defaultdict(set)
+    for idx, user_slots in enumerate(free_slots_list):
+        mail = extract_email(employee_emails[idx]) if idx < len(employee_emails) else f"Employee-{idx}"
+        for s, e in user_slots:
+            if start_hour <= s and e <= end_hour:
+                mapping[(s, e)].add(mail)
+    return mapping
+
+def _available_participants(
+    slot_range: str,
+    free_slots_list: List[List[Slot]],
+    employee_emails: List[Union[str, object]],
+) -> List[str]:
+    """指定したスロット範囲に参加可能なユーザーのメールアドレスリストを返す。"""
+    start, end = map(float, slot_range.split(" - "))
+    participants: List[str] = []
+    for idx, each_slots in enumerate(free_slots_list):
+        if any(s - EPS <= start and end <= e + EPS for s, e in each_slots):
+            participants.append(extract_email(employee_emails[idx]) if idx < len(employee_emails) else f"Employee-{idx}")
+    return participants
 
 def find_common_slots(
-    free_slots_list: List[List[Tuple[float, float]]],
+    free_slots_list: List[List[Slot]],
     employee_emails: List[Union[str, object]],
-    required_participants: int,
-    duration_minutes: int,
-    start_hour: float = 0.0,
-    end_hour: float = 24.0,
+    required: int,
+    duration_min: int,
+    start_hour: HourFloat = 0.0,
+    end_hour: HourFloat = 24.0,
 ) -> List[Tuple[str, List[str]]]:
-    """必要参加者数を満たす共通の空き時間を探索する"""
-    if not free_slots_list or required_participants <= 0:
+    """指定した人数(required)が同時に参加可能なスロットを抽出し、スロット文字列と参加者リストのタプルリストで返す。"""
+    if not free_slots_list or required <= 0:
         return []
 
-    EPS = 1e-6
-    duration_hours = duration_minutes / 60.0
-    slot_users = defaultdict(set)
+    slot_users = _slot_users_map(free_slots_list, employee_emails, start_hour, end_hour)
+    qualified_slots = [slot for slot, users in slot_users.items() if len(users) >= required]
 
-    for i, user_slots in enumerate(free_slots_list):
-        user_email = (
-            extract_email(employee_emails[i])
-            if i < len(employee_emails)
-            else f"Employee-{i}"
-        )
-        for slot in user_slots:
-            if start_hour <= slot[0] and slot[1] <= end_hour:
-                slot_users[slot].add(user_email)
+    continuous = find_continuous_slots(qualified_slots, duration_min / 60.0)
+    results: List[Tuple[str, List[str]]] = []
 
-    available_slots = [
-        slot
-        for slot, users in slot_users.items()
-        if len(users) >= required_participants
-    ]
-    available_slots.sort(key=lambda x: x[0])
+    for rng in continuous:
+        members = _available_participants(rng, free_slots_list, employee_emails)
+        if len(members) >= required:
+            results.append((rng, members))
+    return results
 
-    continuous_ranges = find_continuous_slots(available_slots, duration_hours)
-    result = []
+# 4. Graph API からの予定データ処理
+def _date_sequence(start_date: DateStr, end_date: DateStr) -> List[DateStr]:
+    """開始日と終了日から、日付文字列(YYYY-MM-DD)のリストを生成する。"""
+    start = datetime.strptime(start_date, "%Y-%m-%d")
+    end = datetime.strptime(end_date, "%Y-%m-%d")
+    return [(start + timedelta(days=i)).strftime("%Y-%m-%d") for i in range((end - start).days + 1)]
 
-    for range_str in continuous_ranges:
-        start, end = map(float, range_str.split(" - "))
-        participants = [
-            (
-                extract_email(employee_emails[i])
-                if i < len(employee_emails)
-                else f"Employee-{i}"
-            )
-            for i, user_slots in enumerate(free_slots_list)
-            if any(s - EPS <= start and e + EPS >= end for s, e in user_slots)
-        ]
-        if len(participants) >= required_participants:
-            result.append((range_str, participants))
-
-    return result
-
+def _process_schedule(
+    schedule_info: Dict[str, Any],
+    email_to_idx: Dict[str, int],
+    date: DateStr,
+    start_hour: HourFloat,
+    end_hour: HourFloat,
+    slot_dur: HourFloat,
+    date_user_slots: Dict[DateStr, List[List[Slot]]],
+) -> None:
+    """Graph API のスケジュール情報から、各ユーザーの空きスロットを date_user_slots に格納する。"""
+    values = schedule_info.get("value") or []
+    if not values:
+        return
+    info = values[0]
+    idx = email_to_idx.get(info.get("scheduleId", ""))
+    if idx is None:
+        return
+    for i, flag in enumerate(info.get("availabilityView", "")):
+        if flag != "0":
+            continue
+        s = start_hour + i * slot_dur
+        e = s + slot_dur
+        if e <= end_hour:
+            date_user_slots[date][idx].append((s, e))
 
 def aggregate_user_availability(
     schedule_info_list: List[Dict[str, Any]],
     employee_emails: List[Union[str, object]],
-    start_hour: float,
-    end_hour: float,
-    slot_duration: float,
-    start_date: str,
-    end_date: str,
-) -> Tuple[Dict[str, List[List[Tuple[float, float]]]], List[str]]:
-    """Graph API 取得結果を date_user_slots に整理する"""
-    start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-    end_dt = datetime.strptime(end_date, "%Y-%m-%d")
-    date_seq = [
-        (start_dt + timedelta(days=i)).strftime("%Y-%m-%d")
-        for i in range((end_dt - start_dt).days + 1)
-    ]
-
-    num_days = len(date_seq)
-    num_users = len(employee_emails)
-    date_user_slots = {d: [[] for _ in range(num_users)] for d in date_seq}
+    start_hour: HourFloat,
+    end_hour: HourFloat,
+    slot_duration: HourFloat,
+    start_date: DateStr,
+    end_date: DateStr,
+) -> Tuple[Dict[DateStr, List[List[Slot]]], List[DateStr]]:
+    """各ユーザー・各日付ごとの空きスロット情報を集計し、日付リストとともに返す。"""
+    dates = _date_sequence(start_date, end_date)
+    date_user_slots: Dict[DateStr, List[List[Slot]]] = {d: [[] for _ in employee_emails] for d in dates}
     email_to_idx = {extract_email(e): i for i, e in enumerate(employee_emails)}
 
     for idx, schedule_info in enumerate(schedule_info_list):
-        day_idx = idx // num_users
-        if day_idx >= num_days:
+        day_idx, _ = divmod(idx, len(employee_emails))
+        if day_idx >= len(dates):
             break
-
-        date = date_seq[day_idx]
-        v_items = schedule_info.get("value", [])
-        if not v_items:
-            continue
-
-        info = v_items[0]
-        schedule_id = info.get("scheduleId", "")
-        user_idx = email_to_idx.get(schedule_id)
-        if user_idx is None:
-            continue
-
-        av_view = info.get("availabilityView", "")
-        if not av_view:
-            continue
-
-        for i, flag in enumerate(av_view):
-            if flag == "0":
-                slot_start = start_hour + i * slot_duration
-                slot_end = slot_start + slot_duration
-                if slot_end <= end_hour:
-                    date_user_slots[date][user_idx].append((slot_start, slot_end))
-
-    return date_user_slots, date_seq
-
+        _process_schedule(schedule_info, email_to_idx, dates[day_idx], start_hour, end_hour, slot_duration, date_user_slots)
+    return date_user_slots, dates
 
 def calculate_common_availability(
-    date_user_slots: Dict[str, List[List[Tuple[float, float]]]],
-    date_list: List[str],
+    date_user_slots: Dict[DateStr, List[List[Slot]]],
+    date_list: List[DateStr],
     employee_emails: List[Union[str, object]],
-    required_participants: int,
-    duration_minutes: int,
-    start_hour: float,
-    end_hour: float,
+    required: int,
+    duration_min: int,
+    start_hour: HourFloat,
+    end_hour: HourFloat,
 ) -> List[List[str]]:
-    """date_user_slots から [開始ISO, 終了ISO] のリストを返す"""
-    result = []
-
+    """各日付ごとに、指定人数(required)が同時に参加可能な空き時間候補(ISO8601形式の開始・終了ペア)をリストで返す。"""
+    final: List[List[str]] = []
     for date in date_list:
-        user_slots_list = date_user_slots[date]
-        active_users = [slots for slots in user_slots_list if slots]
-
-        if len(active_users) < required_participants:
+        user_slots = date_user_slots[date]
+        if sum(1 for s in user_slots if s) < required:
             continue
-
-        common_slots = find_common_slots(
-            user_slots_list,
-            employee_emails,
-            required_participants,
-            duration_minutes,
-            start_hour,
-            end_hour,
-        )
-
-        for slot_str, _ in common_slots:
-            start_dt, end_dt = format_slot_to_datetime_str(date, slot_str)
-            result.append([start_dt, end_dt])
-
-    return result
+        for rng, _ in find_common_slots(user_slots, employee_emails, required, duration_min, start_hour, end_hour):
+            final.append(list(slot_str_to_iso(date, rng)))
+    return final
