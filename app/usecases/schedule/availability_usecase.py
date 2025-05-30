@@ -22,6 +22,7 @@ async def get_availability_usecase(
         schedule_info_list = graph_api_client.get_schedules(schedule_req)
         logger.info(f"スケジュール情報: {schedule_info_list}")
         common_times = _calculate_common_times(schedule_req, schedule_info_list)
+        logger.info(f"空き時間: {common_times}")
         return AvailabilityResponse(common_availability=common_times)
     except Exception as e:
         logger.exception("空き時間取得ユースケースに失敗しました")
