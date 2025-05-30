@@ -26,6 +26,7 @@ API_URL = "http://127.0.0.1:8000"
 # システム送信者メールアドレス
 SYSTEM_SENDER_EMAIL = "crawler01@intelligentforce.co.jp"
 
+
 @lru_cache()
 def get_config():
     return {
@@ -42,5 +43,5 @@ def get_config():
         "GRAPH_API_BETA_URL": GRAPH_API_BETA_URL,
         "CLIENT_URL": CLIENT_URL,
         "API_URL": API_URL,
-        "SYSTEM_SENDER_EMAIL": SYSTEM_SENDER_EMAIL
+        "SYSTEM_SENDER_EMAIL": SYSTEM_SENDER_EMAIL,
     }

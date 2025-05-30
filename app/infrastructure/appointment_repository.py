@@ -5,6 +5,7 @@ from app.schemas.schedule import AppointmentRequest
 
 config = get_config()
 
+
 class AppointmentRepository:
     def __init__(self):
         self.engine = create_engine(
@@ -15,7 +16,7 @@ class AppointmentRepository:
                 host="srm-server-k.database.windows.net",
                 port=1433,
                 database="db-SRM-K",
-                query={"driver": "ODBC Driver 18 for SQL Server"}
+                query={"driver": "ODBC Driver 18 for SQL Server"},
             ),
             echo=True,
             fast_executemany=True,

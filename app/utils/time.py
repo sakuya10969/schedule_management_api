@@ -5,10 +5,12 @@ from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
+
 def time_string_to_float(time_str: str) -> float:
     """'HH:MM'形式の時刻文字列を小数時間に変換する (例: '13:30' -> 13.5)"""
     hour, minute = map(int, time_str.split(":"))
     return hour + minute / 60.0
+
 
 def parse_time_str_to_datetime(start_date: str, float_hour: float) -> datetime:
     """日付文字列と小数時間から datetime オブジェクトを生成する"""
@@ -20,10 +22,12 @@ def parse_time_str_to_datetime(start_date: str, float_hour: float) -> datetime:
     new_date = start_dt + timedelta(days=day_offset)
     return datetime(new_date.year, new_date.month, new_date.day, hour, minute)
 
+
 def parse_slot_str(slot_str: str) -> Tuple[float, float]:
     """時間範囲文字列を開始・終了時刻の小数タプルに変換する (例: '21.5 - 22.5' -> (21.5, 22.5))"""
     start_str, end_str = map(str.strip, slot_str.split("-"))
     return float(start_str), float(end_str)
+
 
 def parse_slot(start_date: str, slot_str: str) -> Tuple[datetime, datetime]:
     """日付と時間範囲から開始・終了日時のタプルを生成する"""
@@ -32,9 +36,11 @@ def parse_slot(start_date: str, slot_str: str) -> Tuple[datetime, datetime]:
     end_dt = parse_time_str_to_datetime(start_date, end_hour)
     return start_dt, end_dt
 
+
 def slot_to_time(start_date: str, slots: List[str]) -> List[Tuple[datetime, datetime]]:
     """時間範囲のリストを datetime タプルのリストに変換する"""
     return [parse_slot(start_date, slot) for slot in slots]
+
 
 def generate_subslots(start: float, end: float, duration: float) -> List[str]:
     """指定された時間範囲内で、指定時間長の部分時間枠を生成する"""
@@ -45,7 +51,10 @@ def generate_subslots(start: float, end: float, duration: float) -> List[str]:
         current += duration
     return result
 
-def find_continuous_slots(slots: List[Tuple[float, float]], duration: float) -> List[str]:
+
+def find_continuous_slots(
+    slots: List[Tuple[float, float]], duration: float
+) -> List[str]:
     """指定された時間長に合致する連続した時間枠を抽出する"""
     if not slots or duration <= 0:
         return []
@@ -68,6 +77,7 @@ def find_continuous_slots(slots: List[Tuple[float, float]], duration: float) -> 
 
     return sorted(result, key=lambda x: float(x.split(" - ")[0]))
 
+
 def format_slot_to_datetime_str(date_str: str, slot_str: str) -> Tuple[str, str]:
     """時間枠を ISO 8601形式の日時文字列に変換する
     例: ('2023-10-01', '13.5 - 14.5') -> ('2023-10-01T13:30:00', '2023-10-01T14:30:00')
@@ -78,19 +88,27 @@ def format_slot_to_datetime_str(date_str: str, slot_str: str) -> Tuple[str, str]
     end_dt = base_date + timedelta(hours=end_hour)
     return start_dt.isoformat(), end_dt.isoformat()
 
+
 def format_availability_result(
-    available_slots: Dict[str, Union[List[str], List[Tuple[str, List[str]]]]]
+    available_slots: Dict[str, Union[List[str], List[Tuple[str, List[str]]]]],
 ) -> List[List[str]]:
     """空き時間の結果を ISO 8601形式の日時文字列のリストに変換する"""
     result = []
     for date_str, slots in available_slots.items():
         if isinstance(slots[0], tuple):
-            result.extend([format_slot_to_datetime_str(date_str, slot) for slot, _ in slots])
+            result.extend(
+                [format_slot_to_datetime_str(date_str, slot) for slot, _ in slots]
+            )
         else:
-            result.extend([format_slot_to_datetime_str(date_str, slot) for slot in slots])
+            result.extend(
+                [format_slot_to_datetime_str(date_str, slot) for slot in slots]
+            )
     return [[start, end] for start, end in result]
 
-def split_candidates(schedule_interview_datetimes: List[List[str]], duration_minutes: int) -> List[List[str]]:
+
+def split_candidates(
+    schedule_interview_datetimes: List[List[str]], duration_minutes: int
+) -> List[List[str]]:
     """候補時間を指定された分単位で分割する"""
     result = []
 
@@ -102,10 +120,12 @@ def split_candidates(schedule_interview_datetimes: List[List[str]], duration_min
         if duration_minutes == 60 and time_diff == 90:
             first_end = start_dt + timedelta(minutes=60)
             second_start = start_dt + timedelta(minutes=30)
-            result.extend([
-                [start_dt.isoformat(), first_end.isoformat()],
-                [second_start.isoformat(), end_dt.isoformat()]
-            ])
+            result.extend(
+                [
+                    [start_dt.isoformat(), first_end.isoformat()],
+                    [second_start.isoformat(), end_dt.isoformat()],
+                ]
+            )
             continue
 
         delta = timedelta(minutes=duration_minutes)
@@ -117,7 +137,13 @@ def split_candidates(schedule_interview_datetimes: List[List[str]], duration_min
 
     return result
 
-def parse_availability(schedule_data: Dict[str, Any], start_hour: float, end_hour: float, slot_duration: float) -> List[Tuple[float, float]]:
+
+def parse_availability(
+    schedule_data: Dict[str, Any],
+    start_hour: float,
+    end_hour: float,
+    slot_duration: float,
+) -> List[Tuple[float, float]]:
     """1ユーザー・1日分の空き時間をパースする"""
     result = []
     for schedule in schedule_data.get("value", []):
@@ -131,9 +157,11 @@ def parse_availability(schedule_data: Dict[str, Any], start_hour: float, end_hou
                 result.append((slot_start, slot_end))
     return result
 
+
 def extract_email(val: Union[str, object]) -> str:
     """EmployeeEmail 型 or str から生アドレス文字列を取り出す"""
     return getattr(val, "email", val)
+
 
 def find_common_slots(
     free_slots_list: List[List[Tuple[float, float]]],
@@ -152,13 +180,18 @@ def find_common_slots(
     slot_users = defaultdict(set)
 
     for i, user_slots in enumerate(free_slots_list):
-        user_email = extract_email(employee_emails[i]) if i < len(employee_emails) else f"Employee-{i}"
+        user_email = (
+            extract_email(employee_emails[i])
+            if i < len(employee_emails)
+            else f"Employee-{i}"
+        )
         for slot in user_slots:
             if start_hour <= slot[0] and slot[1] <= end_hour:
                 slot_users[slot].add(user_email)
 
     available_slots = [
-        slot for slot, users in slot_users.items() 
+        slot
+        for slot, users in slot_users.items()
         if len(users) >= required_participants
     ]
     available_slots.sort(key=lambda x: x[0])
@@ -169,7 +202,11 @@ def find_common_slots(
     for range_str in continuous_ranges:
         start, end = map(float, range_str.split(" - "))
         participants = [
-            extract_email(employee_emails[i]) if i < len(employee_emails) else f"Employee-{i}"
+            (
+                extract_email(employee_emails[i])
+                if i < len(employee_emails)
+                else f"Employee-{i}"
+            )
             for i, user_slots in enumerate(free_slots_list)
             if any(s - EPS <= start and e + EPS >= end for s, e in user_slots)
         ]
@@ -177,6 +214,7 @@ def find_common_slots(
             result.append((range_str, participants))
 
     return result
+
 
 def aggregate_user_availability(
     schedule_info_list: List[Dict[str, Any]],
@@ -194,12 +232,10 @@ def aggregate_user_availability(
         (start_dt + timedelta(days=i)).strftime("%Y-%m-%d")
         for i in range((end_dt - start_dt).days + 1)
     ]
-    
+
     num_days = len(date_seq)
     num_users = len(employee_emails)
-    date_user_slots = {
-        d: [[] for _ in range(num_users)] for d in date_seq
-    }
+    date_user_slots = {d: [[] for _ in range(num_users)] for d in date_seq}
     email_to_idx = {extract_email(e): i for i, e in enumerate(employee_emails)}
 
     for idx, schedule_info in enumerate(schedule_info_list):
@@ -231,6 +267,7 @@ def aggregate_user_availability(
 
     return date_user_slots, date_seq
 
+
 def calculate_common_availability(
     date_user_slots: Dict[str, List[List[Tuple[float, float]]]],
     date_list: List[str],
@@ -246,7 +283,7 @@ def calculate_common_availability(
     for date in date_list:
         user_slots_list = date_user_slots[date]
         active_users = [slots for slots in user_slots_list if slots]
-        
+
         if len(active_users) < required_participants:
             continue
 

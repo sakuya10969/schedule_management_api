@@ -12,15 +12,23 @@ logger = logging.getLogger(__name__)
 
 config = get_config()
 
+
 class AzCosmosDBClient:
     def __init__(self):
         """Cosmos DB クライアント初期化"""
         try:
-            self.cosmos_db_client = CosmosClient(config['AZ_COSMOS_DB_ENDPOINT'], config['AZ_COSMOS_DB_KEY'])
-            self.database = self.cosmos_db_client.create_database_if_not_exists(id=config['AZ_COSMOS_DB_NAME'])
+            self.cosmos_db_client = CosmosClient(
+                config["AZ_COSMOS_DB_ENDPOINT"], config["AZ_COSMOS_DB_KEY"]
+            )
+            self.database = self.cosmos_db_client.create_database_if_not_exists(
+                id=config["AZ_COSMOS_DB_NAME"]
+            )
             self.container = self.database.create_container_if_not_exists(
-                id=config['AZ_COSMOS_DB_CONTAINER_NAME'],
-                partition_key={"paths": [f"/{config['AZ_COSMOS_DB_PARTITION_KEY']}"], "kind": "Hash"}
+                id=config["AZ_COSMOS_DB_CONTAINER_NAME"],
+                partition_key={
+                    "paths": [f"/{config['AZ_COSMOS_DB_PARTITION_KEY']}"],
+                    "kind": "Hash",
+                },
             )
             logger.info("Cosmos DB クライアントの初期化成功")
         except exceptions.CosmosHttpResponseError as e:
@@ -33,7 +41,11 @@ class AzCosmosDBClient:
     def create_form_data(self, payload: Dict[str, Any]) -> str:
         """フォームデータをCosmos DBに保存する"""
         cosmos_db_id = str(uuid.uuid4())
-        data = {"id": cosmos_db_id, "partitionKey": config['AZ_COSMOS_DB_PARTITION_KEY'], **payload}
+        data = {
+            "id": cosmos_db_id,
+            "partitionKey": config["AZ_COSMOS_DB_PARTITION_KEY"],
+            **payload,
+        }
         try:
             self.container.create_item(body=data)
             logger.info("フォームデータを保存しました")
@@ -48,7 +60,9 @@ class AzCosmosDBClient:
     def get_form_data(self, cosmos_db_id: str) -> Dict[str, Any]:
         """トークンからフォームデータを取得する"""
         try:
-            item = self.container.read_item(item=cosmos_db_id, partition_key=config['AZ_COSMOS_DB_PARTITION_KEY'])
+            item = self.container.read_item(
+                item=cosmos_db_id, partition_key=config["AZ_COSMOS_DB_PARTITION_KEY"]
+            )
             for key in ["_rid", "_self", "_etag", "_ts"]:
                 item.pop(key, None)
             return item
@@ -59,14 +73,22 @@ class AzCosmosDBClient:
             logger.error(f"フォームデータ取得エラー: {e}")
             raise HTTPException(status_code=500, detail="データ取得エラー")
 
-    def update_form_data(self, cosmos_db_id: str, schedule_interview_datetime: str, event_ids: Dict[str, str]) -> None:
+    def update_form_data(
+        self,
+        cosmos_db_id: str,
+        schedule_interview_datetime: str,
+        event_ids: Dict[str, str],
+    ) -> None:
         """イベントIDをフォームデータに追加する"""
         max_retries = 3
         retry_count = 0
-        
+
         while retry_count < max_retries:
             try:
-                form = self.container.read_item(item=cosmos_db_id, partition_key=config['AZ_COSMOS_DB_PARTITION_KEY'])
+                form = self.container.read_item(
+                    item=cosmos_db_id,
+                    partition_key=config["AZ_COSMOS_DB_PARTITION_KEY"],
+                )
                 form["schedule_interview_datetime"] = schedule_interview_datetime
                 form["event_ids"] = event_ids
                 self.container.replace_item(item=form["id"], body=form)
@@ -82,7 +104,11 @@ class AzCosmosDBClient:
                 logger.warning(f"更新リトライ ({retry_count}/{max_retries})")
                 time.sleep(2**retry_count)
 
-    def remove_candidate_from_other_forms(self, selected_cosmos_db_id: str, selected_schedule_interview_datetime: List[str]) -> None:
+    def remove_candidate_from_other_forms(
+        self,
+        selected_cosmos_db_id: str,
+        selected_schedule_interview_datetime: List[str],
+    ) -> None:
         """他のフォームから選択された候補日を削除"""
         try:
             query = """
@@ -92,16 +118,27 @@ class AzCosmosDBClient:
               AND ARRAY_CONTAINS(c.schedule_interview_datetimes, @selectedScheduleInterviewDatetime)
             """
             parameters = [
-                {"name": "@partitionKey", "value": config['AZ_COSMOS_DB_PARTITION_KEY']},
+                {
+                    "name": "@partitionKey",
+                    "value": config["AZ_COSMOS_DB_PARTITION_KEY"],
+                },
                 {"name": "@currentCosmosDbId", "value": selected_cosmos_db_id},
-                {"name": "@selectedScheduleInterviewDatetime", "value": selected_schedule_interview_datetime},
+                {
+                    "name": "@selectedScheduleInterviewDatetime",
+                    "value": selected_schedule_interview_datetime,
+                },
             ]
             forms = list(self.container.query_items(query=query, parameters=parameters))
 
             for form in forms:
                 updated_candidates = [
-                    c for c in form["schedule_interview_datetimes"]
-                    if not (parse(c[0]) == parse(selected_schedule_interview_datetime[0]) and parse(c[1]) == parse(selected_schedule_interview_datetime[1]))
+                    c
+                    for c in form["schedule_interview_datetimes"]
+                    if not (
+                        parse(c[0]) == parse(selected_schedule_interview_datetime[0])
+                        and parse(c[1])
+                        == parse(selected_schedule_interview_datetime[1])
+                    )
                 ]
                 form["candidates"] = updated_candidates
                 for key in ["_rid", "_self", "_attachments", "_ts"]:
@@ -124,10 +161,14 @@ class AzCosmosDBClient:
             logger.error(f"フォーム確定エラー: {e}")
             raise HTTPException(status_code=500, detail="フォーム確定エラー")
 
-    def finalize_form(self, cosmos_db_id: str, selected_schedule_interview_datetime: List[str]) -> None:
+    def finalize_form(
+        self, cosmos_db_id: str, selected_schedule_interview_datetime: List[str]
+    ) -> None:
         """フォームを確定し、他の候補日を削除"""
         try:
-            self.remove_candidate_from_other_forms(cosmos_db_id, selected_schedule_interview_datetime)
+            self.remove_candidate_from_other_forms(
+                cosmos_db_id, selected_schedule_interview_datetime
+            )
             self.confirm_form(cosmos_db_id)
         except HTTPException:
             raise

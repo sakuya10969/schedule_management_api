@@ -10,6 +10,7 @@ from app.usecases.form.retrieve_form_usecase import retrieve_form_data_usecase
 router = APIRouter(tags=["forms"])
 logger = logging.getLogger(__name__)
 
+
 @router.post("/store_form_data", response_model=Dict[str, Any])
 async def store_form_data(payload: FormData = Body(...)):
     """
@@ -21,6 +22,7 @@ async def store_form_data(payload: FormData = Body(...)):
     except Exception as e:
         logger.error(f"フォームデータの保存に失敗しました: {e}")
         raise HTTPException(status_code=500, detail="Failed to store form data")
+
 
 @router.get("/retrieve_form_data", response_model=FormData)
 async def retrieve_form_data(

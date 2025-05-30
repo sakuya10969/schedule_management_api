@@ -1,16 +1,20 @@
 from pydantic import BaseModel, Field
 from typing import List
 
+
 class EmployeeEmail(BaseModel):
     """ユーザー情報を表すスキーマ"""
+
     email: str = Field(..., description="ユーザーのメールアドレス")
 
     class Config:
         frozen = True
         json_schema_extra = {"example": {"email": "crawler01@intelligentforce.co.jp"}}
 
+
 class ScheduleRequest(BaseModel):
     """スケジュールリクエストを表すスキーマ"""
+
     start_date: str = Field(..., description="開始日 (YYYY-MM-DD形式)")
     end_date: str = Field(..., description="終了日 (YYYY-MM-DD形式)")
     start_time: str = Field(..., description="開始時間 (HH:MM形式)")
@@ -38,8 +42,10 @@ class ScheduleRequest(BaseModel):
             }
         }
 
+
 class FormData(BaseModel):
     """フォームデータを表すスキーマ"""
+
     start_date: str
     end_date: str
     start_time: str

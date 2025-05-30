@@ -1,6 +1,11 @@
 import logging
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Body
-from app.schemas import ScheduleRequest, AppointmentRequest, AppointmentResponse, AvailabilityResponse
+from app.schemas import (
+    ScheduleRequest,
+    AppointmentRequest,
+    AppointmentResponse,
+    AvailabilityResponse,
+)
 
 from app.usecases.schedule.availability_usecase import get_availability_usecase
 from app.usecases.schedule.appointment_usecase import create_appointment_usecase
@@ -8,6 +13,7 @@ from app.usecases.schedule.reschedule_usecase import reschedule_usecase
 
 router = APIRouter(tags=["schedule"])
 logger = logging.getLogger(__name__)
+
 
 @router.post("/get_availability", response_model=AvailabilityResponse)
 async def get_availability(schedule_req: ScheduleRequest):
@@ -17,6 +23,7 @@ async def get_availability(schedule_req: ScheduleRequest):
     except Exception as e:
         logger.error(f"空き時間取得に失敗: {e}")
         raise HTTPException(status_code=500, detail="空き時間取得エラー")
+
 
 @router.post("/appointment", response_model=AppointmentResponse)
 async def create_appointment(
@@ -28,6 +35,7 @@ async def create_appointment(
     except Exception as e:
         logger.error(f"予定作成エラー: {e}")
         raise HTTPException(status_code=500, detail="予定作成エラー")
+
 
 @router.get("/reschedule")
 async def reschedule(

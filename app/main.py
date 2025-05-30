@@ -18,10 +18,13 @@ config = get_config()
 app = FastAPI()
 # CORS設定
 add_cors(app)
+
+
 # ログミドルウェアの追加
 @app.middleware("http")
 async def log_requests_middleware(request: Request, call_next):
     return await log_requests(request, call_next)
+
 
 # ルーターの登録
 app.include_router(form_router.router)

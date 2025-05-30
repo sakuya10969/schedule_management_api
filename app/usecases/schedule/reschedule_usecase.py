@@ -9,14 +9,17 @@ logger = logging.getLogger(__name__)
 
 config = get_config()
 
+
 async def reschedule_usecase(cosmos_db_id: str, confirm: bool) -> HTMLResponse:
     """リスケジュール処理（キャンセルと確認）を行うユースケース"""
     try:
         cosmos_db_client = AzCosmosDBClient()
         form = cosmos_db_client.get_form_data(cosmos_db_id)
-        
+
         if "event_ids" not in form:
-            redirect_url = f"{config['CLIENT_URL']}/appointment?cosmosDbId={cosmos_db_id}"
+            redirect_url = (
+                f"{config['CLIENT_URL']}/appointment?cosmosDbId={cosmos_db_id}"
+            )
             return RedirectResponse(url=redirect_url, status_code=302)
 
         if not confirm:
@@ -43,6 +46,7 @@ async def reschedule_usecase(cosmos_db_id: str, confirm: bool) -> HTMLResponse:
         logger.error(f"リスケジュールユースケースエラー: {e}")
         raise
 
+
 def _show_confirmation_page(cosmos_db_id: str) -> HTMLResponse:
     """確認ページを表示"""
     return _generate_html(
@@ -53,15 +57,16 @@ def _show_confirmation_page(cosmos_db_id: str) -> HTMLResponse:
             {
                 "url": f"{config['API_URL']}/reschedule?cosmos_db_id={cosmos_db_id}&confirm=true",
                 "text": "再調整する",
-                "class": "bg-red-500 hover:bg-red-700"
+                "class": "bg-red-500 hover:bg-red-700",
             },
             {
                 "url": f"{config['CLIENT_URL']}/appointment?cosmos_db_id={cosmos_db_id}",
                 "text": "キャンセル",
-                "class": "bg-gray-500 hover:bg-gray-700"
-            }
-        ]
+                "class": "bg-gray-500 hover:bg-gray-700",
+            },
+        ],
     )
+
 
 def _show_complete_page(cosmos_db_id: str) -> HTMLResponse:
     """完了ページを表示"""
@@ -73,20 +78,23 @@ def _show_complete_page(cosmos_db_id: str) -> HTMLResponse:
             {
                 "url": f"{config['CLIENT_URL']}/appointment?cosmos_db_id={cosmos_db_id}",
                 "text": "日程再調整画面へ",
-                "class": "bg-blue-500 hover:bg-blue-700"
+                "class": "bg-blue-500 hover:bg-blue-700",
             }
-        ]
+        ],
     )
+
 
 def _generate_html(title: str, message: str, buttons: list) -> HTMLResponse:
     """HTMLレスポンスを生成"""
-    buttons_html = "".join([
-        f'<a href="{button["url"]}" '
-        f'class="inline-block {button["class"]} text-white font-bold py-3 px-6 rounded text-xl">'
-        f'{button["text"]}</a>'
-        for button in buttons
-    ])
-    
+    buttons_html = "".join(
+        [
+            f'<a href="{button["url"]}" '
+            f'class="inline-block {button["class"]} text-white font-bold py-3 px-6 rounded text-xl">'
+            f'{button["text"]}</a>'
+            for button in buttons
+        ]
+    )
+
     html_content = f"""
     <html>
     <head>

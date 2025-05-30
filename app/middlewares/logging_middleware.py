@@ -5,6 +5,7 @@ import json
 
 logger = logging.getLogger(__name__)
 
+
 async def log_requests(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID", "N/A")
     start_time = time.time()
@@ -46,6 +47,6 @@ async def log_requests(request: Request, call_next):
         process_time = round((time.time() - start_time) * 1000, 2)
         logger.error(
             f"Error | ID: {request_id} | Duration: {process_time}ms | {str(e)}",
-            exc_info=True
+            exc_info=True,
         )
         raise

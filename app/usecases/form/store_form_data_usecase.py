@@ -5,6 +5,7 @@ from app.infrastructure.az_cosmos import AzCosmosDBClient
 
 logger = logging.getLogger(__name__)
 
+
 async def store_form_data_usecase(payload: FormData) -> str:
     """
     フォームデータを保存し、トークンを返すユースケース
