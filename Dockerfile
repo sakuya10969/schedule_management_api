@@ -4,23 +4,26 @@ FROM python:3.10-slim
 # 作業ディレクトリを設定
 WORKDIR /schedule_management_api
 
-# システム依存パッケージをインストール（ODBCまわり含む）
+# システム依存パッケージをインストール（最小構成 + ODBC前準備）
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gcc \
     curl \
     gnupg \
-    unixodbc \
-    unixodbc-dev \
+    ca-certificates \
     libgssapi-krb5-2 \
     libssl-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Microsoft ODBC Driver for SQL Serverを追加
+# Microsoft ODBC Driver for SQL Server を追加（競合パッケージ除去含む）
 RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
     curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
-    apt-get update && ACCEPT_EULA=Y apt-get install -y --no-install-recommends \
+    apt-get update && \
+    apt-get purge -y libodbc2 libodbcinst2 unixodbc-common || true && \
+    ACCEPT_EULA=Y apt-get install -y --no-install-recommends \
     msodbcsql18 \
+    unixodbc \
+    unixodbc-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Pythonの依存関係をインストール
