@@ -8,6 +8,7 @@ from app.infrastructure.az_cosmos import AzCosmosDBClient
 from app.utils.formatting import parse_candidate, format_candidate_date
 from app.config.config import get_config
 from app.infrastructure.appointment_repository import AppointmentRepository
+from app.constants import EMPLOYEE_EMAILS
 
 logger = logging.getLogger(__name__)
 
@@ -168,10 +169,19 @@ def send_confirmation_emails(
         f"・日程<br>{format_candidate_date(appointment_req.schedule_interview_datetime)}<br>"
         f'・会議URL<br><a href="{meeting_url}">{meeting_url}</a><br><br>'
     )
+    # appointment_req.employee_emailに加えて、定数のEMPLOYEE_EMAILSもループで送信
+    recipients = []
     if appointment_req.employee_email:
+        recipients.append(appointment_req.employee_email)
+    # 定数からメールアドレスを追加
+    recipients.extend(EMPLOYEE_EMAILS)
+    # 重複を除去
+    recipients = list(set(recipients))
+    
+    for recipient_email in recipients:
         graph_api_client.send_email(
             config["SYSTEM_SENDER_EMAIL"],
-            appointment_req.employee_email,
+            recipient_email,
             internal_subject,
             internal_body,
         )
@@ -219,9 +229,19 @@ def send_no_available_schedule_emails(appointment_req: AppointmentRequest) -> No
         "別の日程を提示するか、直接候補者と調整をお願いします。<br><br>"
         "※このメールは自動送信されています。"
     )
-    graph_api_client.send_email(
-        config["SYSTEM_SENDER_EMAIL"],
-        appointment_req.employee_email,
-        subject,
-        body,
-    )
+    # appointment_req.employee_emailに加えて、定数のEMPLOYEE_EMAILSもループで送信
+    recipients = []
+    if appointment_req.employee_email:
+        recipients.append(appointment_req.employee_email)
+    # 定数からメールアドレスを追加
+    recipients.extend(EMPLOYEE_EMAILS)
+    # 重複を除去
+    recipients = list(set(recipients))
+    
+    for recipient_email in recipients:
+        graph_api_client.send_email(
+            config["SYSTEM_SENDER_EMAIL"],
+            recipient_email,
+            subject,
+            body,
+        )
