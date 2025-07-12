@@ -55,12 +55,12 @@ def _show_confirmation_page(cosmos_db_id: str) -> HTMLResponse:
         "既存の予定を削除して再調整しますか？",
         [
             {
-                "url": f"{config['API_URL']}/reschedule?cosmos_db_id={cosmos_db_id}&confirm=true",
+                "url": f"{config['CLIENT_URL']}/reschedule?cosmosDbId={cosmos_db_id}&confirm=true",
                 "text": "再調整する",
                 "class": "bg-red-500 hover:bg-red-700",
             },
             {
-                "url": f"{config['CLIENT_URL']}/appointment?cosmos_db_id={cosmos_db_id}",
+                "url": f"{config['CLIENT_URL']}/appointment?cosmosDbId={cosmos_db_id}",
                 "text": "キャンセル",
                 "class": "bg-gray-500 hover:bg-gray-700",
             },
@@ -76,7 +76,7 @@ def _show_complete_page(cosmos_db_id: str) -> HTMLResponse:
         "既存の予定は削除されました。<br>以下のボタンから新たに日程をご入力ください。",
         [
             {
-                "url": f"{config['CLIENT_URL']}/appointment?cosmos_db_id={cosmos_db_id}",
+                "url": f"{config['CLIENT_URL']}/appointment?cosmosDbId={cosmos_db_id}",
                 "text": "日程再調整画面へ",
                 "class": "bg-blue-500 hover:bg-blue-700",
             }
