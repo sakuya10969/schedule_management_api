@@ -188,7 +188,7 @@ def send_confirmation_emails(
 
     # クライアント向け
     client_subject = "日程確定（インテリジェントフォース）"
-    reschedule_link = f"{config['API_URL']}/reschedule?cosmos_db_id={appointment_req.cosmos_db_id or ''}"
+    reschedule_link = f"{config['CLIENT_URL']}/reschedule?cosmosDbId={appointment_req.cosmos_db_id}"
     client_body = (
         f"{appointment_req.candidate_lastname}様<br><br>"
         "この度は日程を調整いただきありがとうございます。<br>"
