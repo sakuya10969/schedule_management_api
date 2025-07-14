@@ -129,6 +129,28 @@ class GraphAPIClient:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"メール送信エラー: {str(e)}")
 
+    def update_event_time(
+        self, employee_email: str, event_id: str, start_datetime: str, end_datetime: str
+    ) -> None:
+        """予定の開始時刻と終了時刻を更新"""
+        try:
+            url = f"{self.BASE_URL}/{urllib.parse.quote(employee_email)}/events/{event_id}"
+            update_data = {
+                "start": {
+                    "dateTime": start_datetime,
+                    "timeZone": "Tokyo Standard Time"
+                },
+                "end": {
+                    "dateTime": end_datetime,
+                    "timeZone": "Tokyo Standard Time"
+                }
+            }
+            self._handle_request("PATCH", url, json=update_data)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Graph APIイベント時刻更新エラー: {e}"
+            )
+
     def delete_event(self, employee_email: str, event_id: str) -> None:
         """予定を削除するためのGraph API呼び出し"""
         try:
