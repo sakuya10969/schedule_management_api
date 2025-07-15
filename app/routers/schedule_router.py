@@ -9,8 +9,7 @@ from app.schemas import (
 
 from app.usecases.schedule.availability_usecase import get_availability_usecase
 from app.usecases.schedule.appointment_usecase import create_appointment_usecase
-from app.usecases.schedule.reschedule_usecase import reschedule_usecase
-from app.infrastructure.az_cosmos import AzCosmosDBClient
+from app.usecases.schedule.reschedule_usecase import reschedule_usecase, get_reschedule_data_usecase
 
 router = APIRouter(tags=["schedule"])
 logger = logging.getLogger(__name__)
@@ -44,12 +43,7 @@ async def reschedule(
 ):
     """日程再調整のための日時を取得"""
     try:
-        cosmos_db_client = AzCosmosDBClient()
-        form_data = cosmos_db_client.get_form_data(cosmos_db_id)
-        if "event_ids" not in form_data:
-            raise HTTPException(status_code=404, detail="リスケジュールが見つかりません")
-        # schedule_interview_datetimeを戻り値として返す
-        return form_data.get("schedule_interview_datetime")
+        return await get_reschedule_data_usecase(cosmos_db_id)
     except Exception as e:
         logger.error(f"リスケジュールエラー: {e}")
         raise HTTPException(status_code=500, detail="リスケジュールエラー")
