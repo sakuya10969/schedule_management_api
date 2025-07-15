@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 async def store_form_data_usecase(payload: FormData) -> str:
     """
-    フォームデータを保存し、トークンを返すユースケース
+    フォームデータを保存し、CosmosDBのIDを返すユースケース
     """
     try:
         cosmos_db_client = AzCosmosDBClient()

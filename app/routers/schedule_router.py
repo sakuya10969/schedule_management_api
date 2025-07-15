@@ -39,7 +39,7 @@ async def create_appointment(
 
 @router.get("/reschedule")
 async def reschedule(
-    cosmos_db_id: str = Query(..., description="フォームのトークン"),
+    cosmos_db_id: str = Query(..., description="CosmosDBのID"),
 ):
     """日程再調整のための日時を取得"""
     try:
@@ -52,7 +52,7 @@ async def reschedule(
 @router.post("/reschedule")
 async def reschedule(
     schedule_interview_datetime: str,
-    cosmos_db_id: str = Query(..., description="フォームのトークン"),
+    cosmos_db_id: str = Query(..., description="CosmosDBのID"),
 ):
     """日程再調整の確認および実行"""
     try:
