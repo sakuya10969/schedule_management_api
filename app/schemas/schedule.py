@@ -7,7 +7,7 @@ class AppointmentRequest(BaseModel):
 
     schedule_interview_datetime: Optional[str] = Field(
         None,
-        description="選択された候補日時（'none' または '開始日時,終了日時' の形式）",
+        description="選択された候補日時(None または '開始日時,終了日時' の形式）",
     )
     employee_email: str = Field(..., description="面接担当者のメールアドレス")
     candidate_lastname: str = Field(..., description="候補者の姓")
