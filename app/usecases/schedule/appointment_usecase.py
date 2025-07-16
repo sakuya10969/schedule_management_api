@@ -22,9 +22,7 @@ async def create_appointment_usecase(
     """面接担当者の予定を登録し、確認メールを送信するユースケース"""
 
     try:
-        if not appointment_req.schedule_interview_datetime or (
-            appointment_req.schedule_interview_datetime.lower() == "none"
-        ):
+        if appointment_req.schedule_interview_datetime is None:
             logger.info(
                 "候補として '可能な日程がない' が選択されました。予定は登録されません。"
             )
