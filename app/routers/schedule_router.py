@@ -1,10 +1,12 @@
 import logging
+from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Body
 from app.schemas import (
     ScheduleRequest,
     AppointmentRequest,
     AppointmentResponse,
     AvailabilityResponse,
+    RescheduleRequest,
 )
 
 from app.usecases.schedule.availability_usecase import get_availability_usecase
@@ -51,12 +53,11 @@ async def reschedule(
 
 @router.post("/reschedule")
 async def reschedule(
-    schedule_interview_datetime: str,
-    cosmos_db_id: str = Query(..., description="CosmosDBのID"),
+    reschedule_req: RescheduleRequest = Body(...),
 ):
     """日程再調整の確認および実行"""
     try:
-        return await reschedule_usecase(cosmos_db_id, schedule_interview_datetime)
+        return await reschedule_usecase(reschedule_req)
     except Exception as e:
         logger.error(f"リスケジュールエラー: {e}")
         raise HTTPException(status_code=500, detail="リスケジュールエラー")
