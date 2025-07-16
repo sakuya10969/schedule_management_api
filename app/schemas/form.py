@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 
 
 class EmployeeEmail(BaseModel):
@@ -81,5 +81,17 @@ class FormData(BaseModel):
                 ],
                 "schedule_interview_datetime": "2025-01-10T10:00:00",
                 "event_ids": None,
+            }
+        }
+
+class RescheduleRequest(BaseModel):
+    cosmos_db_id: str
+    schedule_interview_datetime: Optional[str] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "cosmos_db_id": "1234567890",
+                "schedule_interview_datetime": "2025-01-10T10:00:00,2025-01-10T11:00:00",
             }
         }

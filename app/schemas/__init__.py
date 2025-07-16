@@ -3,7 +3,7 @@ from app.schemas.schedule import (
     AppointmentResponse,
     AvailabilityResponse,
 )
-from app.schemas.form import FormData, EmployeeEmail, ScheduleRequest
+from app.schemas.form import FormData, EmployeeEmail, ScheduleRequest, RescheduleRequest
 
 __all__ = [
     "ScheduleRequest",
@@ -12,4 +12,5 @@ __all__ = [
     "AppointmentRequest",
     "AppointmentResponse",
     "AvailabilityResponse",
+    "RescheduleRequest",
 ]
