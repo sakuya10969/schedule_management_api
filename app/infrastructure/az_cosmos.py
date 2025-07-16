@@ -175,3 +175,19 @@ class AzCosmosDBClient:
         except Exception as e:
             logger.error(f"フォーム最終確定エラー: {e}")
             raise HTTPException(status_code=500, detail="フォーム最終確定エラー")
+        
+    def delete_form_data(self, cosmos_db_id: str) -> None:
+        """特定のCosmos DBレコードを削除する"""
+        try:
+            self.container.delete_item(
+                item=cosmos_db_id,
+                partition_key=config["AZ_COSMOS_DB_PARTITION_KEY"],
+            )
+            logger.info(f"Cosmos DBレコードを削除しました: {cosmos_db_id}")
+        except exceptions.CosmosResourceNotFoundError:
+            logger.warning(f"削除対象のトークンが見つかりません: {cosmos_db_id}")
+            raise HTTPException(status_code=404, detail="削除対象が見つかりません")
+        except Exception as e:
+            logger.error(f"Cosmos DBレコード削除エラー: {e}")
+            raise HTTPException(status_code=500, detail="削除中にエラーが発生しました")
+
