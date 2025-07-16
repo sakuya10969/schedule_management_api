@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, MetaData, insert, update, delete
+from sqlalchemy import create_engine, MetaData, insert, update, delete, select
 from sqlalchemy.engine import URL
 from app.config.config import get_config
 from app.schemas.schedule import AppointmentRequest
@@ -25,6 +25,15 @@ class AppointmentRepository:
         self.meta = MetaData()
         self.meta.reflect(bind=self.engine)
         self.appointments = self.meta.tables["schedule_management"]
+
+    def get_appointment_by_cosmos_db_id(self, cosmos_db_id: str):
+        """cosmos_db_idに基づいてアポイントメントデータを取得する"""
+        with self.engine.begin() as conn:
+            stmt = select(self.appointments).where(
+                self.appointments.c.cosmos_db_id == cosmos_db_id
+            )
+            result = conn.execute(stmt)
+            return result.fetchone()
 
     def create_appointment(self, appointment_req: AppointmentRequest):
         values = {
