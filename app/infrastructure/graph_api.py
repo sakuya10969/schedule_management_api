@@ -1,7 +1,7 @@
 import requests
 import urllib.parse
 from fastapi import HTTPException
-from typing import Dict, Any, List, Optional
+from typing import Any
 from datetime import datetime, timedelta
 
 from app.utils.access_token import get_access_token
@@ -29,7 +29,7 @@ class GraphAPIClient:
 
     def _handle_request(
         self, method: str, url: str, **kwargs
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """APIリクエストの共通処理"""
         try:
             response = requests.request(method, url, headers=self.headers, **kwargs)
@@ -52,12 +52,12 @@ class GraphAPIClient:
             )
 
     def post_request(
-        self, url: str, body: Dict[str, Any], timeout: int = 60
-    ) -> Optional[Dict[str, Any]]:
+        self, url: str, body: dict[str, Any], timeout: int = 60
+    ) -> dict[str, Any] | None:
         """Graph APIへのPOSTリクエスト"""
         return self._handle_request("POST", url, json=body, timeout=timeout)
 
-    def get_schedules(self, schedule_req: ScheduleRequest) -> List[Dict[str, Any]]:
+    def get_schedules(self, schedule_req: ScheduleRequest) -> list[dict[str, Any]]:
         """スケジュールを取得"""
         try:
             schedules_list = []
@@ -90,8 +90,8 @@ class GraphAPIClient:
             )
 
     def register_event(
-        self, employee_email: str, event: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, employee_email: str, event: dict[str, Any]
+    ) -> dict[str, Any]:
         """予定を登録"""
         try:
             url = (

@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Body
 from app.schemas import (
     ScheduleRequest,

@@ -1,8 +1,7 @@
 from dateutil.parser import parse
-from typing import Tuple, List
 
 
-def parse_candidate(candidate: str) -> Tuple[str, str, List[str]]:
+def parse_candidate(candidate: str) -> tuple[str, str, list[str]]:
     """
     "開始日時, 終了日時" の形式の文字列をパースして開始日時、終了日時、
     及び候補リスト（[開始日時, 終了日時]）を返す。

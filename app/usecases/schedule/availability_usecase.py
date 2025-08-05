@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Any
+from typing import Any
 
 from app.schemas import ScheduleRequest, AvailabilityResponse
 from app.infrastructure.graph_api import GraphAPIClient
@@ -30,8 +30,8 @@ async def get_availability_usecase(
 
 
 def _calculate_common_times(
-    schedule_req: ScheduleRequest, schedule_info_list: List[Dict[str, Any]]
-) -> List[List[str]]:
+    schedule_req: ScheduleRequest, schedule_info_list: list[dict[str, Any]]
+) -> list[list[str]]:
     start_hour = time_string_to_float(schedule_req.start_time)
     end_hour = time_string_to_float(schedule_req.end_time)
     slot_duration = schedule_req.duration_minutes / 60.0

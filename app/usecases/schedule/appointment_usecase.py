@@ -1,6 +1,6 @@
 import logging
 from fastapi import BackgroundTasks
-from typing import List, Dict, Any, Optional
+from typing import Any
 
 from app.schemas import AppointmentRequest, AppointmentResponse
 from app.infrastructure.graph_api import GraphAPIClient
@@ -47,7 +47,7 @@ async def create_appointment_usecase(
         appointment_repository = AppointmentRepository()
         appointment_repository.create_appointment(appointment_req)
 
-        meeting_urls: List[Optional[str]] = [
+        meeting_urls: list[str | None] = [
             (e.get("onlineMeeting") or {}).get("joinUrl") if e else None
             for e in created_events
         ]
@@ -69,7 +69,7 @@ async def create_appointment_usecase(
 
 def _register_events_to_graph_api(
     appointment_req: AppointmentRequest,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Graph APIにイベントを登録"""
     if not appointment_req.schedule_interview_datetime:
         raise ValueError("schedule_interview_datetime is required")
@@ -106,7 +106,7 @@ def _register_events_to_graph_api(
     }
 
     graph_api_client = GraphAPIClient()
-    created_events: List[Dict[str, Any]] = []
+    created_events: list[dict[str, Any]] = []
 
     try:
         event_resp = graph_api_client.register_event(
@@ -128,7 +128,7 @@ def _register_events_to_graph_api(
 
 
 def _store_event_ids_to_cosmos(
-    appointment_req: AppointmentRequest, created_events: List[Dict[str, Any]]
+    appointment_req: AppointmentRequest, created_events: list[dict[str, Any]]
 ) -> None:
     """Cosmos DBにイベントIDを保存"""
     if not appointment_req.cosmos_db_id:
@@ -150,7 +150,7 @@ def _store_event_ids_to_cosmos(
 
 def send_confirmation_emails(
     appointment_req: AppointmentRequest,
-    meeting_urls: List[Optional[str]],
+    meeting_urls: list[str | None],
 ) -> None:
     graph_api_client = GraphAPIClient()
     meeting_url = next((url for url in meeting_urls if url), None)

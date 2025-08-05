@@ -1,7 +1,7 @@
 import logging
 from fastapi import APIRouter, HTTPException, Query, Body
 from fastapi.responses import JSONResponse
-from typing import Dict, Any
+from typing import Any
 
 from app.schemas import FormData
 from app.usecases.form.store_form_data_usecase import store_form_data_usecase
@@ -11,7 +11,7 @@ router = APIRouter(tags=["forms"])
 logger = logging.getLogger(__name__)
 
 
-@router.post("/store_form_data", response_model=Dict[str, Any])
+@router.post("/store_form_data", response_model=dict[str, Any])
 async def store_form_data(payload: FormData = Body(...)):
     """
     フォームデータを保存し、CosmosDBのIDを返すエンドポイント

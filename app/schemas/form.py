@@ -1,5 +1,4 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
 
 
 class EmployeeEmail(BaseModel):
@@ -19,9 +18,9 @@ class ScheduleRequest(BaseModel):
     end_date: str = Field(..., description="終了日 (YYYY-MM-DD形式)")
     start_time: str = Field(..., description="開始時間 (HH:MM形式)")
     end_time: str = Field(..., description="終了時間 (HH:MM形式)")
-    selected_days: List[str] = Field(..., description="選択された曜日のリスト")
+    selected_days: list[str] = Field(..., description="選択された曜日のリスト")
     duration_minutes: int = Field(..., description="打合せ時間（分）")
-    employee_emails: List[EmployeeEmail] = Field(..., description="面接担当者のリスト")
+    employee_emails: list[EmployeeEmail] = Field(..., description="面接担当者のリスト")
     required_participants: int = Field(..., description="共通する候補日を検索する人数")
     time_zone: str = Field(default="Tokyo Standard Time", description="タイムゾーン")
 
@@ -50,13 +49,13 @@ class FormData(BaseModel):
     end_date: str
     start_time: str
     end_time: str
-    selected_days: List[str]
+    selected_days: list[str]
     duration_minutes: int
-    employee_emails: List[EmployeeEmail]
+    employee_emails: list[EmployeeEmail]
     required_participants: int
     time_zone: str = "Tokyo Standard Time"
     is_confirmed: bool = False
-    schedule_interview_datetimes: List[List[str]] | None = None
+    schedule_interview_datetimes: list[list[str]] | None = None
     schedule_interview_datetime: str | None = None
     event_ids: dict | None = None
 
@@ -86,7 +85,7 @@ class FormData(BaseModel):
 
 class RescheduleRequest(BaseModel):
     cosmos_db_id: str
-    schedule_interview_datetime: Optional[str] = None
+    schedule_interview_datetime: str | None = None
 
     class Config:
         json_schema_extra = {

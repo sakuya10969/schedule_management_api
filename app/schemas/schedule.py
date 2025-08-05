@@ -1,11 +1,10 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
 
 
 class AppointmentRequest(BaseModel):
     """面接予約リクエストを表すスキーマ"""
 
-    schedule_interview_datetime: Optional[str] = Field(
+    schedule_interview_datetime: str | None = Field(
         None,
         description="選択された候補日時(None または '開始日時,終了日時' の形式）",
     )
@@ -14,9 +13,9 @@ class AppointmentRequest(BaseModel):
     candidate_firstname: str = Field(..., description="候補者の名")
     company: str = Field(..., description="候補者の所属会社")
     candidate_email: str = Field(..., description="候補者のメールアドレス")
-    cosmos_db_id: Optional[str] = Field(None, description="CosmosDBのID")
-    candidate_id: Optional[int] = Field(None, description="候補者のID")
-    interview_stage: Optional[str] = Field(None, description="面接のステージ")
+    cosmos_db_id: str | None = Field(None, description="CosmosDBのID")
+    candidate_id: int | None = Field(None, description="候補者のID")
+    interview_stage: str | None = Field(None, description="面接のステージ")
 
     class Config:
         json_schema_extra = {
@@ -38,8 +37,8 @@ class AppointmentResponse(BaseModel):
     """面接予約レスポンスを表すスキーマ"""
 
     message: str = Field(..., description="処理結果のメッセージ")
-    subjects: List[str] = Field(..., description="作成された予定の件名リスト")
-    meeting_urls: List[str | None] = Field(..., description="オンライン会議のURLリスト")
+    subjects: list[str] = Field(..., description="作成された予定の件名リスト")
+    meeting_urls: list[str | None] = Field(..., description="オンライン会議のURLリスト")
     employee_email: str = Field(..., description="面接担当者のメールアドレス")
 
     class Config:
@@ -56,7 +55,7 @@ class AppointmentResponse(BaseModel):
 class AvailabilityResponse(BaseModel):
     """空き時間候補のレスポンスを表すスキーマ"""
 
-    common_availability: List[List[str]] = Field(
+    common_availability: list[list[str]] = Field(
         ...,
         description="共通の空き時間候補のリスト（開始日時と終了日時のリストのリスト）",
     )

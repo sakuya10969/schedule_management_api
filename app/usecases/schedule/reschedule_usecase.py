@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from app.infrastructure.az_cosmos import AzCosmosDBClient
 from app.infrastructure.graph_api import GraphAPIClient
@@ -98,7 +97,7 @@ async def reschedule_usecase(reschedule_req: RescheduleRequest) -> None:
         raise
 
 
-def _send_reschedule_emails(cosmos_db_id: str, schedule_interview_datetime: Optional[str]) -> None:
+def _send_reschedule_emails(cosmos_db_id: str, schedule_interview_datetime: str | None) -> None:
     """リスケジュール完了メールを送信"""
     # DBからアポイントメントデータを取得
     appointment_repository = AppointmentRepository()

@@ -1,7 +1,7 @@
 import logging
 import uuid
 import time
-from typing import Dict, List, Any
+from typing import Any
 from fastapi import HTTPException
 from dateutil.parser import parse
 from azure.cosmos import CosmosClient, exceptions
@@ -38,7 +38,7 @@ class AzCosmosDBClient:
             logger.error(f"Cosmos DB クライアントの初期化エラー: {e}")
             raise HTTPException(status_code=500, detail="Cosmos DB 初期化エラー")
 
-    def create_form_data(self, payload: Dict[str, Any]) -> str:
+    def create_form_data(self, payload: dict[str, Any]) -> str:
         """フォームデータをCosmos DBに保存する"""
         cosmos_db_id = str(uuid.uuid4())
         data = {
@@ -57,7 +57,7 @@ class AzCosmosDBClient:
             logger.error(f"フォームデータの保存エラー: {e}")
             raise HTTPException(status_code=500, detail="データ保存エラー")
 
-    def get_form_data(self, cosmos_db_id: str) -> Dict[str, Any]:
+    def get_form_data(self, cosmos_db_id: str) -> dict[str, Any]:
         """トークンからフォームデータを取得する"""
         try:
             item = self.container.read_item(
@@ -77,7 +77,7 @@ class AzCosmosDBClient:
         self,
         cosmos_db_id: str,
         schedule_interview_datetime: str,
-        event_ids: Dict[str, str],
+        event_ids: dict[str, str],
     ) -> None:
         """イベントIDをフォームデータに追加する"""
         max_retries = 3
@@ -107,7 +107,7 @@ class AzCosmosDBClient:
     def remove_candidate_from_other_forms(
         self,
         selected_cosmos_db_id: str,
-        selected_schedule_interview_datetime: List[str],
+        selected_schedule_interview_datetime: list[str],
     ) -> None:
         """他のフォームから選択された候補日を削除"""
         try:
@@ -162,7 +162,7 @@ class AzCosmosDBClient:
             raise HTTPException(status_code=500, detail="フォーム確定エラー")
 
     def finalize_form(
-        self, cosmos_db_id: str, selected_schedule_interview_datetime: List[str]
+        self, cosmos_db_id: str, selected_schedule_interview_datetime: list[str]
     ) -> None:
         """フォームを確定し、他の候補日を削除"""
         try:
