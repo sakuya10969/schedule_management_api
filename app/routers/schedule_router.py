@@ -8,6 +8,7 @@ from app.schemas import (
     AvailabilityResponse,
     RescheduleRequest,
 )
+from app.infrastructure.employee_directory_repository import EmployeeDirectoryRepository
 from app.usecases.schedule.availability_usecase import get_availability_usecase
 from app.usecases.schedule.appointment_usecase import create_appointment_usecase
 from app.usecases.schedule.reschedule_usecase import reschedule_usecase, get_reschedule_data_usecase
@@ -15,6 +16,15 @@ from app.usecases.schedule.reschedule_usecase import reschedule_usecase, get_res
 router = APIRouter(tags=["schedule"])
 logger = logging.getLogger(__name__)
 
+@router.get("/employee_directory")
+async def get_employee_directory():
+    """従業員一覧を取得"""
+    try:
+        employee_directory_repository = EmployeeDirectoryRepository()
+        return employee_directory_repository.get_all_employee_directory()
+    except Exception as e:
+        logger.error(f"従業員一覧取得エラー: {e}")
+        raise HTTPException(status_code=500, detail="従業員一覧取得エラー")
 
 @router.post("/get_availability", response_model=AvailabilityResponse)
 async def get_availability(schedule_req: ScheduleRequest):
