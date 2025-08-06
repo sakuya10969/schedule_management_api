@@ -1,31 +1,17 @@
-from sqlalchemy import create_engine, MetaData, insert, update, delete, select
-from sqlalchemy.engine import URL
+from sqlalchemy import insert, update, delete, select
 
 from app.config.config import get_config
 from app.schemas.schedule import AppointmentRequest
+from app.infrastructure.db import engine, metadata
 
 config = get_config()
 
 
 class AppointmentRepository:
     def __init__(self):
-        self.engine = create_engine(
-            URL.create(
-                "mssql+pyodbc",
-                username="azureuser",
-                password="SRM-password",
-                host="srm-server-k.database.windows.net",
-                port=1433,
-                database="db-SRM-K",
-                query={"driver": "ODBC Driver 18 for SQL Server"},
-            ),
-            echo=True,
-            fast_executemany=True,
-        )
-
-        self.meta = MetaData()
-        self.meta.reflect(bind=self.engine)
-        self.appointments = self.meta.tables["schedule_management"]
+        self.engine = engine
+        self.metadata = metadata
+        self.appointments = self.metadata.tables["schedule_management"]
 
     def get_appointment_by_cosmos_db_id(self, cosmos_db_id: str):
         """cosmos_db_idに基づいてアポイントメントデータを取得する"""
