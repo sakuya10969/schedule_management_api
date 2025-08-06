@@ -21,7 +21,14 @@ async def get_employee_directory():
     """従業員一覧を取得"""
     try:
         employee_directory_repository = EmployeeDirectoryRepository()
-        return employee_directory_repository.get_all_employee_directory()
+        employee_directory_data_list = employee_directory_repository.get_all_employee_directory()
+        return [
+            {
+                "name": employee_directory_data.name,
+                "email": employee_directory_data.mail,
+            }
+            for employee_directory_data in employee_directory_data_list
+        ]
     except Exception as e:
         logger.error(f"従業員一覧取得エラー: {e}")
         raise HTTPException(status_code=500, detail="従業員一覧取得エラー")
