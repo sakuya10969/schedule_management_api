@@ -25,7 +25,7 @@ class EmployeeDirectoryRepository:
         self.meta.reflect(bind=self.engine)
         self.employee_directory = self.meta.tables["employee_directory"]
 
-    def get_employee_directory(self):
+    def get_all_employee_directory(self):
         with self.engine.begin() as conn:
             stmt = select(self.employee_directory)
             result = conn.execute(stmt)
