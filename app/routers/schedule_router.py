@@ -1,5 +1,6 @@
 import logging
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Body
+
 from app.schemas import (
     ScheduleRequest,
     AppointmentRequest,
@@ -7,7 +8,6 @@ from app.schemas import (
     AvailabilityResponse,
     RescheduleRequest,
 )
-
 from app.usecases.schedule.availability_usecase import get_availability_usecase
 from app.usecases.schedule.appointment_usecase import create_appointment_usecase
 from app.usecases.schedule.reschedule_usecase import reschedule_usecase, get_reschedule_data_usecase

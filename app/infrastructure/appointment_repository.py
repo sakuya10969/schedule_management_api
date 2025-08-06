@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine, MetaData, insert, update, delete, select
 from sqlalchemy.engine import URL
+
 from app.config.config import get_config
 from app.schemas.schedule import AppointmentRequest
 
