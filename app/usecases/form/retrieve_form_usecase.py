@@ -29,24 +29,22 @@ async def retrieve_form_data_usecase(cosmos_db_id: str) -> FormData:
             
             # ScheduleRequestを構築
             schedule_req = ScheduleRequest(
-                employee_emails=form_data["employee_emails"],
                 start_date=form_data["start_date"],
                 end_date=form_data["end_date"],
                 start_time=form_data["start_time"],
                 end_time=form_data["end_time"],
+                selected_days=form_data["selected_days"],
                 duration_minutes=form_data["duration_minutes"],
-                required_participants=form_data["required_participants"]
+                employee_emails=form_data["employee_emails"],
+                required_participants=form_data["required_participants"],
+                time_zone=form_data.get("time_zone", "Tokyo Standard Time")
             )
             
             # 最新の空き時間を取得
             common_times = await _get_latest_availability(schedule_req)
             
-            # フラット化して文字列リストに変換
-            flattened_times = []
-            for time_group in common_times:
-                flattened_times.extend(time_group)
-            
-            form_data["schedule_interview_datetimes"] = flattened_times
+            # common_timesは既にlist[list[str]]の形式なので、そのまま設定
+            form_data["schedule_interview_datetimes"] = common_times
         else:
             form_data["schedule_interview_datetimes"] = split_candidates(
                 form_data["schedule_interview_datetimes"], form_data["duration_minutes"]
