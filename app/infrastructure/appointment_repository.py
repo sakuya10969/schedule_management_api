@@ -33,6 +33,7 @@ class AppointmentRepository:
             "cosmos_db_id": appointment_req.cosmos_db_id,
             "candidate_id": appointment_req.candidate_id or None,
             "interview_stage": appointment_req.interview_stage or None,
+            "universityName": appointment_req.universityName or None,
         }
 
         with self.engine.begin() as conn:

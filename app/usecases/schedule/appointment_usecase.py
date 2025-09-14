@@ -79,13 +79,14 @@ def _register_events_to_graph_api(
         raise ValueError(f"Invalid datetime format. start={start_str}, end={end_str}")
 
     event_payload = {
-        "subject": f"【{appointment_req.company}/{appointment_req.candidate_lastname}{appointment_req.candidate_firstname}様】日程確定",
+        "subject": f"(WEB)【{appointment_req.universityName}/{appointment_req.candidate_lastname}{appointment_req.candidate_firstname}様】{appointment_req.interview_stage}",
         "body": {
             "contentType": "HTML",
             "content": (
                 "日程調整が完了しました。詳細は下記の通りです。<br><br>"
                 f"・氏名<br>{appointment_req.candidate_lastname} {appointment_req.candidate_firstname}<br>"
                 f"・所属<br>{appointment_req.company}<br>"
+                f"・大学<br>{appointment_req.universityName}<br>"
                 f"・メールアドレス<br>{appointment_req.candidate_email}<br>"
                 f"・日程<br>{format_candidate_date(appointment_req.schedule_interview_datetime)}<br><br>"
             ),
@@ -175,7 +176,7 @@ def send_confirmation_emails(
     recipients.extend(EMPLOYEE_EMAILS)
     # 重複を除去
     recipients = list(set(recipients))
-    
+
     for recipient_email in recipients:
         graph_api_client.send_email(
             config["SYSTEM_SENDER_EMAIL"],
@@ -235,7 +236,7 @@ def send_no_available_schedule_emails(appointment_req: AppointmentRequest) -> No
     recipients.extend(EMPLOYEE_EMAILS)
     # 重複を除去
     recipients = list(set(recipients))
-    
+
     for recipient_email in recipients:
         graph_api_client.send_email(
             config["SYSTEM_SENDER_EMAIL"],
