@@ -9,6 +9,10 @@ class EmployeeDirectoryRepository:
     def __init__(self):
         self.engine = engine
         self.metadata = metadata
+
+        if "employee_directory" not in self.metadata.tables:
+            self.metadata.reflect(bind=self.engine, only=["employee_directory"])
+
         self.employee_directory = self.metadata.tables["employee_directory"]
 
     def get_all_employee_directory(self):
