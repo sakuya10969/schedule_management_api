@@ -61,27 +61,27 @@ class GraphAPIClient:
         """スケジュールを取得"""
         try:
             schedules_list = []
-            start = datetime.strptime(schedule_req.start_date, "%Y-%m-%d")
-            end = datetime.strptime(schedule_req.end_date, "%Y-%m-%d")
+            start_date = datetime.strptime(schedule_req.start_date, "%Y-%m-%d")
+            end_date = datetime.strptime(schedule_req.end_date, "%Y-%m-%d")
 
             delta = timedelta(days=1)
-            while start <= end:
+            while start_date <= end_date:
                 for employee_email in schedule_req.employee_emails:
                     url = f"{self.BASE_URL}/{urllib.parse.quote(employee_email.email)}/calendar/getSchedule"
                     body = {
                         "schedules": [employee_email.email],
                         "startTime": {
-                            "dateTime": f"{start.date()}T{schedule_req.start_time}:00",
+                            "dateTime": f"{start_date.date()}T{schedule_req.start_time}:00",
                             "timeZone": schedule_req.time_zone,
                         },
                         "endTime": {
-                            "dateTime": f"{start.date()}T{schedule_req.end_time}:00",
+                            "dateTime": f"{start_date.date()}T{schedule_req.end_time}:00",
                             "timeZone": schedule_req.time_zone,
                         },
                         "availabilityViewInterval": schedule_req.duration_minutes,
                     }
                     schedules_list.append(self.post_request(url, body))
-                start += delta
+                start_date += delta
 
             return schedules_list
         except Exception as e:
