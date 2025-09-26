@@ -5,12 +5,9 @@ from typing import Any
 from app.schemas import FormData, ScheduleRequest
 from app.infrastructure.az_cosmos import AzCosmosDBClient
 from app.infrastructure.graph_api import GraphAPIClient
-from app.utils.time import (
-    split_candidates,
-    time_string_to_float,
-    aggregate_user_availability,
-    calculate_common_availability,
-)
+from app.utils.time import time_string_to_float
+from app.utils.slot import split_candidates
+from app.utils.availability import aggregate_user_availability, calculate_common_availability
 
 logger = logging.getLogger(__name__)
 

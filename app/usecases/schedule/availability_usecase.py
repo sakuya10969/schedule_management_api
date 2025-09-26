@@ -3,11 +3,8 @@ from typing import Any
 
 from app.schemas import ScheduleRequest, AvailabilityResponse
 from app.infrastructure.graph_api import GraphAPIClient
-from app.utils.time import (
-    time_string_to_float,
-    aggregate_user_availability,
-    calculate_common_availability,
-)
+from app.utils.time import time_string_to_float
+from app.utils.availability import aggregate_user_availability, calculate_common_availability
 
 logger = logging.getLogger(__name__)
 

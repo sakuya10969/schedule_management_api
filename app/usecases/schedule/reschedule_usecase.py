@@ -4,7 +4,7 @@ from app.infrastructure.az_cosmos import AzCosmosDBClient
 from app.infrastructure.graph_api import GraphAPIClient
 from app.infrastructure.appointment_repository import AppointmentRepository
 from app.utils.formatting import parse_candidate
-from app.utils.time import split_candidates
+from app.utils.slot import split_candidates
 from app.config.config import get_config
 from app.schemas import FormData, RescheduleRequest
 from app.utils.formatting import format_candidate_date
