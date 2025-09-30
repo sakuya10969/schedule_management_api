@@ -11,6 +11,10 @@ class AppointmentRepository:
     def __init__(self):
         self.engine = engine
         self.metadata = metadata
+
+        if "schedule_management" not in self.metadata.tables:
+            self.metadata.reflect(bind=self.engine, only=["schedule_management"])
+
         self.appointments = self.metadata.tables["schedule_management"]
 
     def get_appointment_by_cosmos_db_id(self, cosmos_db_id: str):

@@ -26,7 +26,6 @@ def format_candidate_date(candidate: str) -> str:
         start_str, end_str = [s.strip() for s in candidate.split(",")]
         start_dt = parse(start_str)
         end_dt = parse(end_str)
-
         # 曜日は start_dt.weekday() で取得（月：0〜日：6）
         formatted_date = (
             f"{start_dt.month}/{start_dt.day}({day_map[start_dt.weekday()]}) "
