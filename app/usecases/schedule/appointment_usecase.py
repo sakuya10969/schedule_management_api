@@ -95,7 +95,7 @@ def _register_events_to_graph_api(
     )
 
     event_payload = {
-        "subject": f"#{appointment_req.candidate_id} (WEB)【{appointment_req.universityName}/{appointment_req.candidate_lastname}{appointment_req.candidate_firstname}様】{interview_stage_jp}",
+        "subject": f"#{appointment_req.candidate_id} (WEB)【{appointment_req.universityName}/{appointment_req.candidate_lastname}{appointment_req.candidate_firstname}様】 キャリア採用・{interview_stage_jp}",
         "body": {
             "contentType": "HTML",
             "content": (
