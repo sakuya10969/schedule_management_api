@@ -78,8 +78,24 @@ def _register_events_to_graph_api(
     if not (start_str and end_str):
         raise ValueError(f"Invalid datetime format. start={start_str}, end={end_str}")
 
+    # interview_stageを日本語に変換
+    interview_stage_mapping = {
+        "entry": "エントリー",
+        "casual": "カジュアル面接",
+        "firstInterview": "一次面接",
+        "HRInterview": "人事面談",
+        "secondInterview": "二次面接",
+        "finalInterview": "最終面接",
+        "offerInterview": "オファー面談",
+        "additionalInterview": "追加面談",
+    }
+
+    interview_stage_jp = interview_stage_mapping.get(
+        appointment_req.interview_stage, appointment_req.interview_stage
+    )
+
     event_payload = {
-        "subject": f"(WEB)【{appointment_req.universityName}/{appointment_req.candidate_lastname}{appointment_req.candidate_firstname}様】{appointment_req.interview_stage}",
+        "subject": f"#{appointment_req.candidate_id} (WEB)【{appointment_req.universityName}/{appointment_req.candidate_lastname}{appointment_req.candidate_firstname}様】{interview_stage_jp}",
         "body": {
             "contentType": "HTML",
             "content": (
