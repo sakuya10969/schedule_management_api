@@ -118,7 +118,14 @@ def _register_events_to_graph_api(
                     "name": f"{appointment_req.candidate_lastname} {appointment_req.candidate_firstname}",
                 },
                 "type": "required",
-            }
+            },
+            {
+                "emailAddress": {
+                    "address": config["SYSTEM_SENDER_EMAIL"],
+                    "name": "システム送信者",
+                },
+                "type": "required",
+            },
         ],
     }
 
@@ -190,8 +197,6 @@ def send_confirmation_emails(
         recipients.append(appointment_req.employee_email)
     # 定数からメールアドレスを追加
     recipients.extend([*EMPLOYEE_EMAILS, config["SYSTEM_SENDER_EMAIL"]])
-    # 重複を除去
-    recipients = list(set(recipients))
 
     for recipient_email in recipients:
         graph_api_client.send_email(
