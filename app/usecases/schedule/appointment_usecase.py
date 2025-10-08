@@ -8,7 +8,7 @@ from app.infrastructure.az_cosmos import AzCosmosDBClient
 from app.utils.formatting import parse_candidate, format_candidate_date
 from app.config.config import get_config
 from app.infrastructure.appointment_repository import AppointmentRepository
-from app.constants import EMPLOYEE_EMAILS
+from app.constants import EMPLOYEE_EMAILS, SYSTEM_SENDER_EMAIL
 
 logger = logging.getLogger(__name__)
 
@@ -189,7 +189,7 @@ def send_confirmation_emails(
     if appointment_req.employee_email:
         recipients.append(appointment_req.employee_email)
     # 定数からメールアドレスを追加
-    recipients.extend(EMPLOYEE_EMAILS)
+    recipients.extend([*EMPLOYEE_EMAILS, config["SYSTEM_SENDER_EMAIL"]])
     # 重複を除去
     recipients = list(set(recipients))
 
