@@ -8,7 +8,7 @@ from app.infrastructure.az_cosmos import AzCosmosDBClient
 from app.utils.formatting import parse_candidate, format_candidate_date
 from app.config.config import get_config
 from app.infrastructure.appointment_repository import AppointmentRepository
-from app.constants import EMPLOYEE_EMAILS, SYSTEM_SENDER_EMAIL
+from app.constants import EMPLOYEE_EMAILS
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ def _register_events_to_graph_api(
     )
 
     event_payload = {
-        "subject": f"#{appointment_req.candidate_id} (WEB)【{appointment_req.universityName}/{appointment_req.candidate_lastname}{appointment_req.candidate_firstname}様】 キャリア採用・{interview_stage_jp}",
+        "subject": f"#{appointment_req.candidate_id} (WEB)【{appointment_req.universityName}/{appointment_req.candidate_lastname} {appointment_req.candidate_firstname}様】 キャリア採用・{interview_stage_jp}",
         "body": {
             "contentType": "HTML",
             "content": (
@@ -175,7 +175,7 @@ def send_confirmation_emails(
         raise ValueError("会議 URL が取得できませんでした")
 
     # 内部向け
-    internal_subject = f"【{appointment_req.company}/{appointment_req.candidate_lastname}{appointment_req.candidate_firstname}様】日程確定"
+    internal_subject = f"【{appointment_req.company}/{appointment_req.candidate_lastname} {appointment_req.candidate_firstname}様】日程確定"
     internal_body = (
         "日程調整が完了しました。詳細は下記の通りです。<br><br>"
         f"・氏名<br>{appointment_req.candidate_lastname} {appointment_req.candidate_firstname}<br>"
@@ -233,7 +233,7 @@ def send_no_available_schedule_emails(appointment_req: AppointmentRequest) -> No
         return
 
     graph_api_client = GraphAPIClient()
-    subject = f"【{appointment_req.company}/{appointment_req.candidate_lastname}{appointment_req.candidate_firstname}様】日程確定"
+    subject = f"【{appointment_req.company}/{appointment_req.candidate_lastname} {appointment_req.candidate_firstname}様】日程確定"
     body = (
         f"{appointment_req.candidate_lastname}様<br><br>"
         "以下の候補者から日程調整の回答がありましたが、提示された日程では面接の調整ができませんでした。<br><br>"
