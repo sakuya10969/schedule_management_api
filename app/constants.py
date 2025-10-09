@@ -5,3 +5,14 @@ EMPLOYEE_EMAILS = [
     "m.kawamura@intelligentforce.co.jp",
     "andante6670@gmail.com",
 ]
+
+INTERVIEW_STAGE_MAPPINGS = {
+    "entry": "エントリー",
+    "casual": "カジュアル面接",
+    "firstInterview": "一次面接",
+    "HRInterview": "人事面談",
+    "secondInterview": "二次面接",
+    "finalInterview": "最終面接",
+    "offerInterview": "オファー面談",
+    "additionalInterview": "追加面談",
+}
