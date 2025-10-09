@@ -18,9 +18,10 @@ async def get_availability_usecase(
         graph_api_client = GraphAPIClient()
         schedule_info_list = graph_api_client.get_schedules(schedule_req)
         logger.info(f"スケジュール情報: {schedule_info_list}")
-        common_times = _calculate_common_times(schedule_req, schedule_info_list)
+        common_times, slot_members_map = _calculate_common_times(schedule_req, schedule_info_list)
         logger.info(f"空き時間: {common_times}")
-        return AvailabilityResponse(common_availability=common_times)
+        logger.info(f"各スロットの参加者リスト: {slot_members_map}")
+        return AvailabilityResponse(common_availability=common_times, slot_members_map=slot_members_map)
     except Exception as e:
         logger.exception("空き時間取得ユースケースに失敗しました")
         raise
@@ -28,7 +29,7 @@ async def get_availability_usecase(
 
 def _calculate_common_times(
     schedule_req: ScheduleRequest, schedule_info_list: list[dict[str, Any]]
-) -> list[list[str]]:
+) -> tuple[list[list[str, str]], dict[str, list[str]]]:
     start_hour = time_string_to_float(schedule_req.start_time)
     end_hour = time_string_to_float(schedule_req.end_time)
     slot_duration = schedule_req.duration_minutes / 60.0
@@ -45,7 +46,7 @@ def _calculate_common_times(
     logger.info(f"date_user_slots: {date_user_slots}")
     logger.info(f"date_list: {date_list}")
 
-    return calculate_common_availability(
+    common_availability, slot_members_map = calculate_common_availability(
         date_user_slots,
         date_list,
         schedule_req.employee_emails,
@@ -54,3 +55,4 @@ def _calculate_common_times(
         start_hour,
         end_hour,
     )
+    return common_availability, slot_members_map
