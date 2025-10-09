@@ -144,13 +144,19 @@ def calculate_common_availability(
     duration_min: int,
     start_hour: float,
     end_hour: float,
-) -> list[list[str]]:
-    """各日付ごとに、指定人数(required)が同時に参加可能な空き時間候補(ISO8601形式の開始・終了ペア)をリストで返す。"""
-    final: list[list[str]] = []
+) -> tuple[list[list[str, str]], dict[str, list[str]]]:
+    """各日付ごとに、指定人数(required)が同時に参加可能な空き時間候補(ISO8601形式の開始・終了ペア)をリストで返す。
+    また、各スロットの参加者リストを辞書で返す。"""
+    common_availability: list[list[str, str]] = []
+    slot_members_map: dict[str, list[str]] = defaultdict(list)
+
     for date in date_list:
         user_slots = date_user_slots[date]
         if sum(1 for s in user_slots if s) < required:
             continue
-        for rng, _ in find_common_slots(user_slots, employee_emails, required, duration_min, start_hour, end_hour):
-            final.append(list(slot_str_to_iso(date, rng)))
-    return final
+        for rng, members in find_common_slots(user_slots, employee_emails, required, duration_min, start_hour, end_hour):
+            start_iso, end_iso = slot_str_to_iso(date, rng)
+            common_availability.append([start_iso, end_iso])
+            key = f"{start_iso}/{end_iso}"
+            slot_members_map[key] = members
+    return common_availability, slot_members_map
