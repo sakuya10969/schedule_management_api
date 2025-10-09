@@ -9,9 +9,10 @@ from app.schemas import (
     RescheduleRequest,
 )
 from app.infrastructure.employee_directory_repository import EmployeeDirectoryRepository
-from app.usecases.schedule.availability_usecase import get_availability_usecase
-from app.usecases.schedule.appointment_usecase import create_appointment_usecase
-from app.usecases.schedule.reschedule_usecase import reschedule_usecase, get_reschedule_data_usecase
+from app.usecases.schedule.availability_usecase import AvailabilityUsecase
+from app.usecases.schedule.appointment_usecase import AppointmentUsecase
+from app.usecases.schedule.reschedule_usecase import RescheduleUsecase
+from app.usecases.schedule.get_reschedule_usecase import GetRescheduleUsecase
 
 router = APIRouter(tags=["schedule"])
 logger = logging.getLogger(__name__)
@@ -33,11 +34,11 @@ async def get_employee_directory():
         logger.error(f"従業員一覧取得エラー: {e}")
         raise HTTPException(status_code=500, detail="従業員一覧取得エラー")
 
-@router.post("/get_availability", response_model=AvailabilityResponse)
+@router.post("/availability", response_model=AvailabilityResponse)
 async def get_availability(schedule_req: ScheduleRequest):
     """指定されたユーザリストと時間帯における空き時間を返す"""
     try:
-        return await get_availability_usecase(schedule_req)
+        return await AvailabilityUsecase().execute(schedule_req)
     except Exception as e:
         logger.error(f"空き時間取得に失敗: {e}")
         raise HTTPException(status_code=500, detail="空き時間取得エラー")
@@ -49,7 +50,7 @@ async def create_appointment(
 ):
     """面接担当者の予定を登録し、確認メールを送信"""
     try:
-        return await create_appointment_usecase(background_tasks, appointment_req)
+        return await AppointmentUsecase().execute(background_tasks, appointment_req)
     except Exception as e:
         logger.error(f"予定作成エラー: {e}")
         raise HTTPException(status_code=500, detail="予定作成エラー")
@@ -61,7 +62,7 @@ async def reschedule(
 ):
     """日程再調整のための日時を取得"""
     try:
-        return await get_reschedule_data_usecase(cosmos_db_id)
+        return await GetRescheduleUsecase().execute(cosmos_db_id)
     except Exception as e:
         logger.error(f"リスケジュールエラー: {e}")
         raise HTTPException(status_code=500, detail="リスケジュールエラー")
@@ -73,7 +74,7 @@ async def reschedule(
 ):
     """日程再調整の確認および実行"""
     try:
-        return await reschedule_usecase(reschedule_req)
+        return await RescheduleUsecase().execute(reschedule_req)
     except Exception as e:
         logger.error(f"リスケジュールエラー: {e}")
         raise HTTPException(status_code=500, detail="リスケジュールエラー")
