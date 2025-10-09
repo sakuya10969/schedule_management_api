@@ -47,7 +47,6 @@ class AppointmentUsecase:
             created_events = self._register_events_to_graph_api(appointment_req)
             if not created_events:
                 raise RuntimeError("Graph API がイベントを返しませんでした")
-
             # Cosmos DBにイベントIDを保存
             self._store_event_ids_to_cosmos(appointment_req, created_events)
 

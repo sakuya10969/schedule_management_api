@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 config = get_config()
 
-class GetRescheduleUsecase:
+class GetRescheduleDataUsecase:
     def __init__(self):
         self.cosmos_db_client = AzCosmosDBClient()
         self.graph_api_client = GraphAPIClient()
