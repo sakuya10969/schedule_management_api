@@ -26,5 +26,5 @@ az containerapp update \
   --name ca-sm-dev-010 \
   --resource-group funcsche \
   --image smdev.azurecr.io/schedule_management_api:latest \
-  --revision-suffix rev-YYMMDD
+  --revision-suffix rev-YY-MMDD-hhmm
 ```
