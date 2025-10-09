@@ -38,10 +38,10 @@ async def retrieve_form_data_usecase(cosmos_db_id: str) -> FormData:
             )
             
             # 最新の空き時間を取得
-            common_times = await _get_latest_availability(schedule_req)
-            
+            common_times, slot_members_map = await _get_latest_availability(schedule_req)
             # common_timesは既にlist[list[str]]の形式なので、そのまま設定
             form_data["schedule_interview_datetimes"] = common_times
+            form_data["slot_members_map"] = slot_members_map
         else:
             form_data["schedule_interview_datetimes"] = split_candidates(
                 form_data["schedule_interview_datetimes"], form_data["duration_minutes"]
@@ -54,15 +54,15 @@ async def retrieve_form_data_usecase(cosmos_db_id: str) -> FormData:
         raise HTTPException(status_code=404, detail="AzCosmosId not found")
 
 
-async def _get_latest_availability(schedule_req: ScheduleRequest) -> list[list[str]]:
+async def _get_latest_availability(schedule_req: ScheduleRequest) -> tuple[list[list[str]], dict[str, list[str]]]:
     """最新の空き時間を取得する"""
     try:
         graph_api_client = GraphAPIClient()
         schedule_info_list = graph_api_client.get_schedules(schedule_req)
         logger.info(f"スケジュール情報: {schedule_info_list}")
-        common_times = _calculate_common_times(schedule_req, schedule_info_list)
+        common_times, slot_members_map = _calculate_common_times(schedule_req, schedule_info_list)
         logger.info(f"空き時間: {common_times}")
-        return common_times
+        return common_times, slot_members_map
     except Exception as e:
         logger.exception("最新の空き時間取得に失敗しました")
         raise
@@ -70,7 +70,7 @@ async def _get_latest_availability(schedule_req: ScheduleRequest) -> list[list[s
 
 def _calculate_common_times(
     schedule_req: ScheduleRequest, schedule_info_list: list[dict[str, Any]]
-) -> list[list[str]]:
+) -> tuple[list[list[str]], dict[str, list[str]]]:
     start_hour = time_string_to_float(schedule_req.start_time)
     end_hour = time_string_to_float(schedule_req.end_time)
     slot_duration = schedule_req.duration_minutes / 60.0
@@ -87,7 +87,7 @@ def _calculate_common_times(
     logger.info(f"date_user_slots: {date_user_slots}")
     logger.info(f"date_list: {date_list}")
 
-    return calculate_common_availability(
+    common_availability, slot_members_map = calculate_common_availability(
         date_user_slots,
         date_list,
         schedule_req.employee_emails,
@@ -96,3 +96,5 @@ def _calculate_common_times(
         start_hour,
         end_hour,
     )
+
+    return common_availability, slot_members_map
