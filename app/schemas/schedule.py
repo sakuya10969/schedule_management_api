@@ -61,7 +61,7 @@ class AvailabilityResponse(BaseModel):
         ...,
         description="共通の空き時間候補のリスト（開始日時と終了日時のリストのリスト）",
     )
-    slot_members_map: dict[str, list[str]] = Field(
+    slot_employees_map: dict[str, list[str]] = Field(
         ...,
         description="各スロットの参加者リストの辞書",
     )
@@ -73,7 +73,7 @@ class AvailabilityResponse(BaseModel):
                     ["2025-01-10T10:00:00", "2025-01-10T11:00:00"],
                     ["2025-01-10T14:00:00", "2025-01-10T15:00:00"],
                 ],
-                "slot_members_map": {
+                "slot_employees_map": {
                     "2025-01-10T10:00:00/2025-01-10T11:00:00": ["crawler01@intelligentforce.co.jp", "y.ohama@intelligentforce.co.jp"],
                     "2025-01-10T14:00:00/2025-01-10T15:00:00": ["crawler01@intelligentforce.co.jp", "y.ohama@intelligentforce.co.jp"],
                 },

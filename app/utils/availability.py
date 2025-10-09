@@ -58,9 +58,9 @@ def find_common_slots(
     results: list[tuple[str, list[str]]] = []
 
     for rng in continuous:
-        members = _available_participants(rng, free_slots_list, employee_emails)
-        if len(members) >= required:
-            results.append((rng, members))
+        employees = _available_participants(rng, free_slots_list, employee_emails)
+        if len(employees) >= required:
+            results.append((rng, employees))
     return results
 
 def parse_user_daily_slots(
@@ -69,7 +69,7 @@ def parse_user_daily_slots(
     end_hour: float,
     slot_dur: float,
 ) -> list[tuple[float, float]]:
-    """1ユーザー・1日のスケジュール情報から空きスロットリストを返す（副作用なし）。"""
+    """1ユーザー・1日のスケジュール情報から空きスロットリストを返す(副作用なし)。"""
     slots: list[tuple[float, float]] = []
     values = schedule_info.get("value") or []
     if not values:
@@ -148,15 +148,15 @@ def calculate_common_availability(
     """各日付ごとに、指定人数(required)が同時に参加可能な空き時間候補(ISO8601形式の開始・終了ペア)をリストで返す。
     また、各スロットの参加者リストを辞書で返す。"""
     common_availability: list[list[str, str]] = []
-    slot_members_map: dict[str, list[str]] = defaultdict(list)
+    slot_employees_map: dict[str, list[str]] = defaultdict(list)
 
     for date in date_list:
         user_slots = date_user_slots[date]
         if sum(1 for s in user_slots if s) < required:
             continue
-        for rng, members in find_common_slots(user_slots, employee_emails, required, duration_min, start_hour, end_hour):
+        for rng, employees in find_common_slots(user_slots, employee_emails, required, duration_min, start_hour, end_hour):
             start_iso, end_iso = slot_str_to_iso(date, rng)
             common_availability.append([start_iso, end_iso])
             key = f"{start_iso}/{end_iso}"
-            slot_members_map[key] = members
-    return common_availability, slot_members_map
+            slot_employees_map[key] = employees
+    return common_availability, slot_employees_map

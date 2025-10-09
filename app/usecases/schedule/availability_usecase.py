@@ -22,10 +22,10 @@ class AvailabilityUsecase:
         try:
             schedule_info_list = self.graph_api_client.get_schedules(schedule_req)
             logger.info(f"スケジュール情報: {schedule_info_list}")
-            common_times, slot_members_map = self._calculate_common_times(schedule_req, schedule_info_list)
+            common_times, slot_employees_map = self._calculate_common_times(schedule_req, schedule_info_list)
             logger.info(f"空き時間: {common_times}")
-            logger.info(f"各スロットの参加者リスト: {slot_members_map}")
-            return AvailabilityResponse(common_availability=common_times, slot_members_map=slot_members_map)
+            logger.info(f"各スロットの参加者リスト: {slot_employees_map}")
+            return AvailabilityResponse(common_availability=common_times, slot_employees_map=slot_employees_map)
         except Exception as e:
             logger.exception("空き時間取得ユースケースに失敗しました")
             raise
@@ -50,7 +50,7 @@ class AvailabilityUsecase:
         logger.info(f"date_user_slots: {date_user_slots}")
         logger.info(f"date_list: {date_list}")
 
-        common_availability, slot_members_map = calculate_common_availability(
+        common_availability, slot_employees_map = calculate_common_availability(
             date_user_slots,
             date_list,
             schedule_req.employee_emails,
@@ -59,4 +59,4 @@ class AvailabilityUsecase:
             start_hour,
             end_hour,
         )
-        return common_availability, slot_members_map
+        return common_availability, slot_employees_map

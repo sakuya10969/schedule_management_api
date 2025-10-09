@@ -38,10 +38,10 @@ class RetrieveFormDataUsecase:
                     time_zone=form_data.get("time_zone", "Tokyo Standard Time")
                 )
                 # 最新の空き時間を取得
-                common_times, slot_members_map = self._get_latest_availability(schedule_req)
+                common_times, slot_employees_map = self._get_latest_availability(schedule_req)
                 # common_timesは既にlist[list[str]]の形式なので、そのまま設定
                 form_data["schedule_interview_datetimes"] = common_times
-                form_data["slot_members_map"] = slot_members_map
+                form_data["slot_employees_map"] = slot_employees_map
             else:
                 form_data["schedule_interview_datetimes"] = split_candidates(
                     form_data["schedule_interview_datetimes"], form_data["duration_minutes"]
@@ -59,9 +59,9 @@ class RetrieveFormDataUsecase:
         try:
             schedule_info_list = self.graph_api_client.get_schedules(schedule_req)
             logger.info(f"スケジュール情報: {schedule_info_list}")
-            common_times, slot_members_map = self._calculate_common_times(schedule_req, schedule_info_list)
+            common_times, slot_employees_map = self._calculate_common_times(schedule_req, schedule_info_list)
             logger.info(f"空き時間: {common_times}")
-            return common_times, slot_members_map
+            return common_times, slot_employees_map
         except Exception as e:
             logger.exception("最新の空き時間取得に失敗しました")
             raise
@@ -86,7 +86,7 @@ class RetrieveFormDataUsecase:
         logger.info(f"date_user_slots: {date_user_slots}")
         logger.info(f"date_list: {date_list}")
 
-        common_availability, slot_members_map = calculate_common_availability(
+        common_availability, slot_employees_map = calculate_common_availability(
             date_user_slots,
             date_list,
             schedule_req.employee_emails,
@@ -96,4 +96,4 @@ class RetrieveFormDataUsecase:
             end_hour,
         )
 
-        return common_availability, slot_members_map
+        return common_availability, slot_employees_map
