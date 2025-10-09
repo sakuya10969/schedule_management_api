@@ -14,7 +14,9 @@ az acr login --name smdev
 ### ACRへイメージをプッシュ
 ```
 docker-compose push
+
 or
+
 docker push smdev.azurecr.io/schedule_management_api:latest
 ```
 
