@@ -56,6 +56,7 @@ class FormData(BaseModel):
     time_zone: str = "Tokyo Standard Time"
     is_confirmed: bool = False
     schedule_interview_datetimes: list[list[str]] | None = None
+    slot_members_map: dict[str, list[str]] | None = None
     schedule_interview_datetime: str | None = None
     event_ids: dict | None = None
 
@@ -78,6 +79,10 @@ class FormData(BaseModel):
                     ["2025-01-10T10:00:00", "2025-01-10T11:00:00"],
                     ["2025-01-10T14:00:00", "2025-01-10T15:00:00"],
                 ],
+                "slot_members_map": {
+                    "2025-01-10T10:00:00/2025-01-10T11:00:00": ["crawler01@intelligentforce.co.jp", "y.ohama@intelligentforce.co.jp"],
+                    "2025-01-10T14:00:00/2025-01-10T15:00:00": ["crawler01@intelligentforce.co.jp", "y.ohama@intelligentforce.co.jp"],
+                },
                 "schedule_interview_datetime": "2025-01-10T10:00:00",
                 "event_ids": None,
             }

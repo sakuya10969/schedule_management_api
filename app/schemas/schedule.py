@@ -16,7 +16,7 @@ class AppointmentRequest(BaseModel):
     cosmos_db_id: str | None = Field(None, description="CosmosDBのID")
     candidate_id: int | None = Field(None, description="候補者のID")
     interview_stage: str | None = Field(None, description="面接のステージ")
-    universityName: str | None = Field(..., description="大学名")
+    university: str | None = Field(..., description="大学名")
 
     class Config:
         json_schema_extra = {
@@ -30,7 +30,7 @@ class AppointmentRequest(BaseModel):
                 "cosmos_db_id": "sample-az-cosmos-id-123",
                 "candidate_id": "1234567890",
                 "interview_stage": "1",
-                "universityName": "インテリ大学",
+                "university": "インテリ大学",
             }
         }
 
@@ -61,6 +61,10 @@ class AvailabilityResponse(BaseModel):
         ...,
         description="共通の空き時間候補のリスト（開始日時と終了日時のリストのリスト）",
     )
+    slot_members_map: dict[str, list[str]] = Field(
+        ...,
+        description="各スロットの参加者リストの辞書",
+    )
 
     class Config:
         json_schema_extra = {
@@ -68,6 +72,10 @@ class AvailabilityResponse(BaseModel):
                 "common_availability": [
                     ["2025-01-10T10:00:00", "2025-01-10T11:00:00"],
                     ["2025-01-10T14:00:00", "2025-01-10T15:00:00"],
-                ]
+                ],
+                "slot_members_map": {
+                    "2025-01-10T10:00:00/2025-01-10T11:00:00": ["crawler01@intelligentforce.co.jp", "y.ohama@intelligentforce.co.jp"],
+                    "2025-01-10T14:00:00/2025-01-10T15:00:00": ["crawler01@intelligentforce.co.jp", "y.ohama@intelligentforce.co.jp"],
+                },
             }
         }
