@@ -52,14 +52,14 @@ class AzCosmosDBClient(AzCosmosDBClientInterface):
             logger.info("フォームデータを保存しました")
             return cosmos_db_id
         except exceptions.CosmosResourceExistsError:
-            logger.error("重複するトークンが存在します")
+            logger.error("重複するCosmos DB IDが存在します")
             raise HTTPException(status_code=409, detail="Duplicate cosmos_db_id")
         except Exception as e:
             logger.error(f"フォームデータの保存エラー: {e}")
             raise HTTPException(status_code=500, detail="データ保存エラー")
 
     def get_form_data(self, cosmos_db_id: str) -> dict[str, Any]:
-        """トークンからフォームデータを取得する"""
+        """Cosmos DB IDからフォームデータを取得する"""
         try:
             item = self.container.read_item(
                 item=cosmos_db_id, partition_key=config["AZ_COSMOS_DB_PARTITION_KEY"]
@@ -68,8 +68,8 @@ class AzCosmosDBClient(AzCosmosDBClientInterface):
                 item.pop(key, None)
             return item
         except exceptions.CosmosResourceNotFoundError:
-            logger.error(f"トークンが見つかりません: {cosmos_db_id}")
-            raise HTTPException(status_code=404, detail="トークンが見つかりません")
+            logger.error(f"Cosmos DB IDが見つかりません: {cosmos_db_id}")
+            raise HTTPException(status_code=404, detail="Cosmos DB IDが見つかりません")
         except Exception as e:
             logger.error(f"フォームデータ取得エラー: {e}")
             raise HTTPException(status_code=500, detail="データ取得エラー")
@@ -95,8 +95,8 @@ class AzCosmosDBClient(AzCosmosDBClientInterface):
                 self.container.replace_item(item=form["id"], body=form)
                 return
             except exceptions.CosmosResourceNotFoundError:
-                logger.error(f"更新対象のトークンが見つかりません: {cosmos_db_id}")
-                raise HTTPException(status_code=404, detail="トークンが見つかりません")
+                logger.error(f"更新対象のCosmos DB IDが見つかりません: {cosmos_db_id}")
+                raise HTTPException(status_code=404, detail="Cosmos DB IDが見つかりません")
             except exceptions.CosmosHttpResponseError as e:
                 retry_count += 1
                 if retry_count >= max_retries:
@@ -156,8 +156,8 @@ class AzCosmosDBClient(AzCosmosDBClientInterface):
             form["is_confirmed"] = True
             self.container.replace_item(item=form["id"], body=form)
         except exceptions.CosmosResourceNotFoundError:
-            logger.error(f"確定対象のトークンが見つかりません: {cosmos_db_id}")
-            raise HTTPException(status_code=404, detail="トークンが見つかりません")
+            logger.error(f"確定対象のCosmos DB IDが見つかりません: {cosmos_db_id}")
+            raise HTTPException(status_code=404, detail="Cosmos DB IDが見つかりません")
         except Exception as e:
             logger.error(f"フォーム確定エラー: {e}")
             raise HTTPException(status_code=500, detail="フォーム確定エラー")
@@ -186,7 +186,7 @@ class AzCosmosDBClient(AzCosmosDBClientInterface):
             )
             logger.info(f"Cosmos DBレコードを削除しました: {cosmos_db_id}")
         except exceptions.CosmosResourceNotFoundError:
-            logger.warning(f"削除対象のトークンが見つかりません: {cosmos_db_id}")
+            logger.warning(f"削除対象のCosmos DB IDが見つかりません: {cosmos_db_id}")
             raise HTTPException(status_code=404, detail="削除対象が見つかりません")
         except Exception as e:
             logger.error(f"Cosmos DBレコード削除エラー: {e}")
