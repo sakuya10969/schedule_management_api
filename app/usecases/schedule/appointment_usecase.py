@@ -8,7 +8,7 @@ from app.infrastructure.az_cosmos import AzCosmosDBClient
 from app.utils.formatting import parse_candidate, format_candidate_date
 from app.config.config import get_config
 from app.infrastructure.appointment_repository import AppointmentRepository
-from app.constants import EMPLOYEE_EMAILS, INTERVIEW_STAGE_MAPPINGS
+from app.constants import EMPLOYEE_EMAILS, INTERVIEW_STAGE_MAPPING
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +84,7 @@ class AppointmentUsecase:
         if not (start_str and end_str):
             raise ValueError(f"Invalid datetime format. start={start_str}, end={end_str}")
 
-        interview_stage_jp = INTERVIEW_STAGE_MAPPINGS.get(
+        interview_stage_jp = INTERVIEW_STAGE_MAPPING.get(
             appointment_req.interview_stage, appointment_req.interview_stage
         )
 

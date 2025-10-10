@@ -6,7 +6,7 @@ EMPLOYEE_EMAILS = [
     "andante6670@gmail.com",
 ]
 
-INTERVIEW_STAGE_MAPPINGS = {
+INTERVIEW_STAGE_MAPPING = {
     "entry": "エントリー",
     "casual": "カジュアル面接",
     "firstInterview": "一次面接",
