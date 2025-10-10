@@ -1,11 +1,14 @@
 from sqlalchemy import select
+from typing import Any
+
 from app.config.config import get_config
 from app.infrastructure.db import engine, metadata
+from app.interfaces.employee_directory_repository_interface import EmployeeDirectoryRepositoryInterface
 
 config = get_config()
 
 
-class EmployeeDirectoryRepository:
+class EmployeeDirectoryRepository(EmployeeDirectoryRepositoryInterface):
     def __init__(self):
         self.engine = engine
         self.metadata = metadata
@@ -15,7 +18,7 @@ class EmployeeDirectoryRepository:
 
         self.employee_directory = self.metadata.tables["employee_directory"]
 
-    def get_all_employee_directory(self):
+    def get_all_employee_directory(self) -> Any:
         with self.engine.begin() as conn:
             stmt = select(self.employee_directory)
             result = conn.execute(stmt)

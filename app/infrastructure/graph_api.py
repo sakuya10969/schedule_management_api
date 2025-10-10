@@ -6,9 +6,9 @@ from datetime import datetime, timedelta
 
 from app.utils.access_token import get_access_token
 from app.schemas.form import ScheduleRequest
+from app.interfaces.graph_api_interface import GraphAPIClientInterface
 
-
-class GraphAPIClient:
+class GraphAPIClient(GraphAPIClientInterface):
     BASE_URL = "https://graph.microsoft.com/v1.0/users"
 
     def __init__(self):

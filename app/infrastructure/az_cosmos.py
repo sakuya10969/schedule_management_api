@@ -7,13 +7,14 @@ from dateutil.parser import parse
 from azure.cosmos import CosmosClient, exceptions
 
 from app.config.config import get_config
+from app.interfaces.az_cosmos_interface import AzCosmosDBClientInterface
 
 logger = logging.getLogger(__name__)
 
 config = get_config()
 
 
-class AzCosmosDBClient:
+class AzCosmosDBClient(AzCosmosDBClientInterface):
     def __init__(self):
         """Cosmos DB クライアント初期化"""
         try:

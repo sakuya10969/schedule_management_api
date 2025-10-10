@@ -1,13 +1,15 @@
 from sqlalchemy import insert, update, delete, select
+from typing import Any
 
 from app.config.config import get_config
 from app.schemas.schedule import AppointmentRequest
 from app.infrastructure.db import engine, metadata
+from app.interfaces.appointment_repository_interface import AppointmentRepositoryInterface
 
 config = get_config()
 
 
-class AppointmentRepository:
+class AppointmentRepository(AppointmentRepositoryInterface):
     def __init__(self):
         self.engine = engine
         self.metadata = metadata
@@ -17,7 +19,7 @@ class AppointmentRepository:
 
         self.appointments = self.metadata.tables["schedule_management"]
 
-    def get_appointment_by_cosmos_db_id(self, cosmos_db_id: str):
+    def get_appointment_by_cosmos_db_id(self, cosmos_db_id: str)-> Any:
         """cosmos_db_idに基づいてアポイントメントデータを取得する"""
         with self.engine.begin() as conn:
             stmt = select(self.appointments).where(
@@ -26,7 +28,7 @@ class AppointmentRepository:
             result = conn.execute(stmt)
             return result.fetchone()
 
-    def create_appointment(self, appointment_req: AppointmentRequest):
+    def create_appointment(self, appointment_req: AppointmentRequest)-> None:
         values = {
             "scheduled_interview_datetime": appointment_req.schedule_interview_datetime,
             "employee_email": appointment_req.employee_email,
@@ -44,7 +46,7 @@ class AppointmentRepository:
             stmt = insert(self.appointments).values(values)
             conn.execute(stmt)
 
-    def update_schedule_interview_datetime(self, cosmos_db_id: str, new_schedule_interview_datetime: str):
+    def update_schedule_interview_datetime(self, cosmos_db_id: str, new_schedule_interview_datetime: str)-> None:
         """cosmos_db_idに基づいてscheduled_interview_datetimeを更新する"""
         with self.engine.begin() as conn:
             stmt = update(self.appointments).where(
@@ -52,7 +54,7 @@ class AppointmentRepository:
             ).values(scheduled_interview_datetime=new_schedule_interview_datetime)
             conn.execute(stmt)
 
-    def delete_appointment(self, cosmos_db_id: str):
+    def delete_appointment(self, cosmos_db_id: str)-> None:
         """cosmos_db_idに基づいてレコードを削除する"""
         with self.engine.begin() as conn:
             stmt = delete(self.appointments).where(
